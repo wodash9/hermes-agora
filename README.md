@@ -85,7 +85,7 @@ Ejemplo de mensaje dirigido desde Seldon a Daneel:
 }
 ```
 
-Regla operativa: usa `TASK` para disparar perfiles; respuestas `DONE/BLOCKED/QA` no se convierten automáticamente en nuevos `TASK` para evitar bucles.
+Regla operativa: usa `TASK` para disparar perfiles; respuestas `DONE/BLOCKED/QA` no se convierten automáticamente en nuevos `TASK` para evitar bucles. Un perfil ignora sus propios mensajes como protección anti-loop; para probar a Seldon end-to-end, el `TASK` debe venir de un humano u otro perfil, no de `seldon-ceo` vía API.
 
 Ejecución puntual:
 
