@@ -16,14 +16,14 @@ export interface ServerConfig {
 const defaultProfiles: Record<string, AgentProfileConfig> = {
   'seldon-ceo': { displayName: 'Seldon', scopes: ['messages:read', 'messages:write', 'admin'], channels: ['general', 'strategy', 'qa'] },
   'jeeves-ops': { displayName: 'Jeeves', scopes: ['messages:read', 'messages:write'], channels: ['general', 'ops'] },
-  'daneel-tech': { displayName: 'Daneel', scopes: ['messages:read', 'messages:write'], channels: ['general', 'tech'] },
+  'daneel-cto': { displayName: 'Daneel', scopes: ['messages:read', 'messages:write'], channels: ['general', 'tech'] },
   'valentine-product': { displayName: 'Valentine', scopes: ['messages:read', 'messages:write'], channels: ['general', 'product'] },
   'lyra-research': { displayName: 'Lyra', scopes: ['messages:read', 'messages:write'], channels: ['general', 'research'] },
   'kvothe-marketing': { displayName: 'Kvothe', scopes: ['messages:read', 'messages:write'], channels: ['general', 'marketing'] },
   'locke-sales': { displayName: 'Locke', scopes: ['messages:read', 'messages:write'], channels: ['general', 'sales'] },
   'columbo-qa': { displayName: 'Columbo', scopes: ['messages:read', 'messages:write'], channels: ['general', 'qa'] },
   'lipwig-finance': { displayName: 'Lipwig', scopes: ['messages:read', 'messages:write'], channels: ['general', 'finance'] },
-  'cordelia-cs': { displayName: 'Cordelia', scopes: ['messages:read', 'messages:write'], channels: ['general', 'customer-success'] },
+  'cordelia-success': { displayName: 'Cordelia', scopes: ['messages:read', 'messages:write'], channels: ['general', 'customer-success'] },
   'portia-legal': { displayName: 'Portia', scopes: ['messages:read', 'messages:write'], channels: ['general', 'legal'] },
   'atticus-suplan-legal': { displayName: 'Atticus', scopes: ['messages:read', 'messages:write'], channels: ['general', 'suplan', 'legal'] },
   'iris-packaging-design': { displayName: 'Iris', scopes: ['messages:read', 'messages:write'], channels: ['general', 'suplan', 'design'] }

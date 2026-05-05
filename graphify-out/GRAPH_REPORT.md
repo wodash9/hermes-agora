@@ -1,11 +1,11 @@
 # Graph Report - .  (2026-05-05)
 
 ## Corpus Check
-- 23 files · ~5,266 words
+- 23 files · ~6,834 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 55 nodes · 69 edges · 15 communities detected
+- 61 nodes · 79 edges · 15 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -27,7 +27,7 @@
 - [[_COMMUNITY_Community 14|Community 14]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `JsonMessageStore` - 7 edges
+1. `JsonMessageStore` - 10 edges
 2. `verifyKeycloakToken()` - 5 edges
 3. `normalizeChannel()` - 4 edges
 4. `authenticateAgentToken()` - 4 edges
@@ -44,27 +44,27 @@
 ## Communities
 
 ### Community 0 - "Community 0"
+Cohesion: 0.27
+Nodes (3): JsonMessageStore, normalizeChannel(), parseProfilePresence()
+
+### Community 1 - "Community 1"
 Cohesion: 0.38
 Nodes (10): authenticateAgentToken(), authenticateToken(), bearerToken(), canAccessChannel(), hasRequiredAudience(), hasRole(), requireIdentity(), requireScope() (+2 more)
 
-### Community 1 - "Community 1"
+### Community 2 - "Community 2"
 Cohesion: 0.26
 Nodes (4): createAgoraApp(), loadServerConfig(), parseProfiles(), attachAgoraSocket()
-
-### Community 2 - "Community 2"
-Cohesion: 0.39
-Nodes (2): JsonMessageStore, normalizeChannel()
 
 ### Community 3 - "Community 3"
 Cohesion: 0.4
 Nodes (0):
 
 ### Community 4 - "Community 4"
-Cohesion: 0.5
+Cohesion: 0.4
 Nodes (0):
 
 ### Community 5 - "Community 5"
-Cohesion: 0.5
+Cohesion: 0.4
 Nodes (0):
 
 ### Community 6 - "Community 6"
@@ -126,7 +126,7 @@ Nodes (0):
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `JsonMessageStore` connect `Community 2` to `Community 1`?**
-  _High betweenness centrality (0.084) - this node is a cross-community bridge._
-- **Why does `normalizeChannel()` connect `Community 2` to `Community 1`?**
-  _High betweenness centrality (0.026) - this node is a cross-community bridge._
+- **Why does `JsonMessageStore` connect `Community 0` to `Community 2`?**
+  _High betweenness centrality (0.121) - this node is a cross-community bridge._
+- **Why does `normalizeChannel()` connect `Community 0` to `Community 2`?**
+  _High betweenness centrality (0.019) - this node is a cross-community bridge._

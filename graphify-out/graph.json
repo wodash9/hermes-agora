@@ -18,71 +18,107 @@
       "source_file": "dist-server/server/store.js",
       "source_location": "L1",
       "id": "dist_server_server_store_js",
-      "community": 2,
+      "community": 0,
       "norm_label": "store.js"
     },
     {
       "label": "JsonMessageStore",
       "file_type": "code",
       "source_file": "src/server/store.ts",
-      "source_location": "L27",
+      "source_location": "L42",
       "id": "store_jsonmessagestore",
-      "community": 2,
+      "community": 0,
       "norm_label": "jsonmessagestore"
     },
     {
       "label": ".constructor()",
       "file_type": "code",
       "source_file": "src/server/store.ts",
-      "source_location": "L28",
+      "source_location": "L43",
       "id": "store_jsonmessagestore_constructor",
-      "community": 2,
+      "community": 0,
       "norm_label": ".constructor()"
     },
     {
       "label": ".open()",
       "file_type": "code",
       "source_file": "src/server/store.ts",
-      "source_location": "L30",
+      "source_location": "L45",
       "id": "store_jsonmessagestore_open",
-      "community": 2,
+      "community": 0,
       "norm_label": ".open()"
     },
     {
       "label": ".createMessage()",
       "file_type": "code",
       "source_file": "src/server/store.ts",
-      "source_location": "L45",
+      "source_location": "L60",
       "id": "store_jsonmessagestore_createmessage",
-      "community": 2,
+      "community": 0,
       "norm_label": ".createmessage()"
     },
     {
       "label": ".listMessages()",
       "file_type": "code",
       "source_file": "src/server/store.ts",
-      "source_location": "L67",
+      "source_location": "L84",
       "id": "store_jsonmessagestore_listmessages",
-      "community": 2,
+      "community": 0,
       "norm_label": ".listmessages()"
+    },
+    {
+      "label": ".updateProfileStatus()",
+      "file_type": "code",
+      "source_file": "src/server/store.ts",
+      "source_location": "L103",
+      "id": "store_jsonmessagestore_updateprofilestatus",
+      "community": 0,
+      "norm_label": ".updateprofilestatus()"
+    },
+    {
+      "label": ".listProfileStatuses()",
+      "file_type": "code",
+      "source_file": "src/server/store.ts",
+      "source_location": "L116",
+      "id": "store_jsonmessagestore_listprofilestatuses",
+      "community": 0,
+      "norm_label": ".listprofilestatuses()"
+    },
+    {
+      "label": ".setProfileStatus()",
+      "file_type": "code",
+      "source_file": "src/server/store.ts",
+      "source_location": "L133",
+      "id": "store_jsonmessagestore_setprofilestatus",
+      "community": 0,
+      "norm_label": ".setprofilestatus()"
     },
     {
       "label": ".persist()",
       "file_type": "code",
       "source_file": "src/server/store.ts",
-      "source_location": "L86",
+      "source_location": "L145",
       "id": "store_jsonmessagestore_persist",
-      "community": 2,
+      "community": 0,
       "norm_label": ".persist()"
     },
     {
       "label": "normalizeChannel()",
       "file_type": "code",
       "source_file": "src/server/store.ts",
-      "source_location": "L93",
+      "source_location": "L152",
       "id": "store_normalizechannel",
-      "community": 2,
+      "community": 0,
       "norm_label": "normalizechannel()"
+    },
+    {
+      "label": "parseProfilePresence()",
+      "file_type": "code",
+      "source_file": "src/server/store.ts",
+      "source_location": "L158",
+      "id": "store_parseprofilepresence",
+      "community": 0,
+      "norm_label": "parseprofilepresence()"
     },
     {
       "label": "socket.js",
@@ -90,7 +126,7 @@
       "source_file": "dist-server/server/socket.js",
       "source_location": "L1",
       "id": "dist_server_server_socket_js",
-      "community": 1,
+      "community": 2,
       "norm_label": "socket.js"
     },
     {
@@ -99,7 +135,7 @@
       "source_file": "src/server/socket.ts",
       "source_location": "L7",
       "id": "socket_attachagorasocket",
-      "community": 1,
+      "community": 2,
       "norm_label": "attachagorasocket()"
     },
     {
@@ -108,7 +144,7 @@
       "source_file": "dist-server/server/auth.js",
       "source_location": "L1",
       "id": "dist_server_server_auth_js",
-      "community": 0,
+      "community": 1,
       "norm_label": "auth.js"
     },
     {
@@ -117,7 +153,7 @@
       "source_file": "src/server/auth.ts",
       "source_location": "L13",
       "id": "auth_bearertoken",
-      "community": 0,
+      "community": 1,
       "norm_label": "bearertoken()"
     },
     {
@@ -126,7 +162,7 @@
       "source_file": "src/server/auth.ts",
       "source_location": "L19",
       "id": "auth_safeequals",
-      "community": 0,
+      "community": 1,
       "norm_label": "safeequals()"
     },
     {
@@ -135,7 +171,7 @@
       "source_file": "src/server/auth.ts",
       "source_location": "L26",
       "id": "auth_hasrequiredaudience",
-      "community": 0,
+      "community": 1,
       "norm_label": "hasrequiredaudience()"
     },
     {
@@ -144,7 +180,7 @@
       "source_file": "src/server/auth.ts",
       "source_location": "L32",
       "id": "auth_hasrole",
-      "community": 0,
+      "community": 1,
       "norm_label": "hasrole()"
     },
     {
@@ -153,7 +189,7 @@
       "source_file": "src/server/auth.ts",
       "source_location": "L39",
       "id": "auth_verifykeycloaktoken",
-      "community": 0,
+      "community": 1,
       "norm_label": "verifykeycloaktoken()"
     },
     {
@@ -162,7 +198,7 @@
       "source_file": "src/server/auth.ts",
       "source_location": "L55",
       "id": "auth_authenticateagenttoken",
-      "community": 0,
+      "community": 1,
       "norm_label": "authenticateagenttoken()"
     },
     {
@@ -171,7 +207,7 @@
       "source_file": "src/server/auth.ts",
       "source_location": "L64",
       "id": "auth_authenticatetoken",
-      "community": 0,
+      "community": 1,
       "norm_label": "authenticatetoken()"
     },
     {
@@ -180,7 +216,7 @@
       "source_file": "src/server/auth.ts",
       "source_location": "L71",
       "id": "auth_canaccesschannel",
-      "community": 0,
+      "community": 1,
       "norm_label": "canaccesschannel()"
     },
     {
@@ -189,7 +225,7 @@
       "source_file": "src/server/auth.ts",
       "source_location": "L75",
       "id": "auth_requireidentity",
-      "community": 0,
+      "community": 1,
       "norm_label": "requireidentity()"
     },
     {
@@ -198,7 +234,7 @@
       "source_file": "src/server/auth.ts",
       "source_location": "L87",
       "id": "auth_requirescope",
-      "community": 0,
+      "community": 1,
       "norm_label": "requirescope()"
     },
     {
@@ -207,7 +243,7 @@
       "source_file": "dist-server/server/app.js",
       "source_location": "L1",
       "id": "dist_server_server_app_js",
-      "community": 1,
+      "community": 2,
       "norm_label": "app.js"
     },
     {
@@ -216,7 +252,7 @@
       "source_file": "src/server/app.ts",
       "source_location": "L20",
       "id": "app_createagoraapp",
-      "community": 1,
+      "community": 2,
       "norm_label": "createagoraapp()"
     },
     {
@@ -225,7 +261,7 @@
       "source_file": "dist-server/server/config.js",
       "source_location": "L1",
       "id": "dist_server_server_config_js",
-      "community": 1,
+      "community": 2,
       "norm_label": "config.js"
     },
     {
@@ -234,7 +270,7 @@
       "source_file": "src/server/config.ts",
       "source_location": "L32",
       "id": "config_parseprofiles",
-      "community": 1,
+      "community": 2,
       "norm_label": "parseprofiles()"
     },
     {
@@ -243,7 +279,7 @@
       "source_file": "src/server/config.ts",
       "source_location": "L44",
       "id": "config_loadserverconfig",
-      "community": 1,
+      "community": 2,
       "norm_label": "loadserverconfig()"
     },
     {
@@ -315,7 +351,7 @@
       "source_file": "src/client/api.ts",
       "source_location": "L1",
       "id": "src_client_api_ts",
-      "community": 4,
+      "community": 3,
       "norm_label": "api.ts"
     },
     {
@@ -324,7 +360,7 @@
       "source_file": "src/client/api.ts",
       "source_location": "L3",
       "id": "api_fetchidentity",
-      "community": 4,
+      "community": 3,
       "norm_label": "fetchidentity()"
     },
     {
@@ -333,16 +369,25 @@
       "source_file": "src/client/api.ts",
       "source_location": "L9",
       "id": "api_fetchmessages",
-      "community": 4,
+      "community": 3,
       "norm_label": "fetchmessages()"
+    },
+    {
+      "label": "fetchProfileStatuses()",
+      "file_type": "code",
+      "source_file": "src/client/api.ts",
+      "source_location": "L15",
+      "id": "api_fetchprofilestatuses",
+      "community": 3,
+      "norm_label": "fetchprofilestatuses()"
     },
     {
       "label": "postMessage()",
       "file_type": "code",
       "source_file": "src/client/api.ts",
-      "source_location": "L15",
+      "source_location": "L21",
       "id": "api_postmessage",
-      "community": 4,
+      "community": 3,
       "norm_label": "postmessage()"
     },
     {
@@ -351,7 +396,7 @@
       "source_file": "src/client/auth.ts",
       "source_location": "L1",
       "id": "src_client_auth_ts",
-      "community": 3,
+      "community": 4,
       "norm_label": "auth.ts"
     },
     {
@@ -360,7 +405,7 @@
       "source_file": "src/client/auth.ts",
       "source_location": "L12",
       "id": "auth_ismockallowed",
-      "community": 3,
+      "community": 4,
       "norm_label": "ismockallowed()"
     },
     {
@@ -369,7 +414,7 @@
       "source_file": "src/client/auth.ts",
       "source_location": "L16",
       "id": "auth_createclientauthconfig",
-      "community": 3,
+      "community": 4,
       "norm_label": "createclientauthconfig()"
     },
     {
@@ -378,7 +423,7 @@
       "source_file": "src/client/auth.ts",
       "source_location": "L29",
       "id": "auth_initkeycloak",
-      "community": 3,
+      "community": 4,
       "norm_label": "initkeycloak()"
     },
     {
@@ -387,7 +432,7 @@
       "source_file": "src/client/auth.ts",
       "source_location": "L38",
       "id": "auth_resetkeycloakforretry",
-      "community": 3,
+      "community": 4,
       "norm_label": "resetkeycloakforretry()"
     },
     {
@@ -403,7 +448,7 @@
       "label": "boot()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L19",
+      "source_location": "L23",
       "id": "app_boot",
       "community": 5,
       "norm_label": "boot()"
@@ -412,16 +457,25 @@
       "label": "load()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L46",
+      "source_location": "L50",
       "id": "app_load",
       "community": 5,
       "norm_label": "load()"
     },
     {
-      "label": "handleSubmit()",
+      "label": "refreshStatuses()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
       "source_location": "L64",
+      "id": "app_refreshstatuses",
+      "community": 5,
+      "norm_label": "refreshstatuses()"
+    },
+    {
+      "label": "handleSubmit()",
+      "file_type": "code",
+      "source_file": "src/client/App.tsx",
+      "source_location": "L74",
       "id": "app_handlesubmit",
       "community": 5,
       "norm_label": "handlesubmit()"
@@ -441,7 +495,7 @@
       "source_file": "src/server/socket.ts",
       "source_location": "L1",
       "id": "src_server_socket_ts",
-      "community": 1,
+      "community": 2,
       "norm_label": "socket.ts"
     },
     {
@@ -450,7 +504,7 @@
       "source_file": "src/server/config.ts",
       "source_location": "L1",
       "id": "src_server_config_ts",
-      "community": 1,
+      "community": 2,
       "norm_label": "config.ts"
     },
     {
@@ -459,7 +513,7 @@
       "source_file": "src/server/auth.ts",
       "source_location": "L1",
       "id": "src_server_auth_ts",
-      "community": 0,
+      "community": 1,
       "norm_label": "auth.ts"
     },
     {
@@ -468,7 +522,7 @@
       "source_file": "src/server/index.ts",
       "source_location": "L1",
       "id": "src_server_index_ts",
-      "community": 1,
+      "community": 2,
       "norm_label": "index.ts"
     },
     {
@@ -477,7 +531,7 @@
       "source_file": "src/server/app.ts",
       "source_location": "L1",
       "id": "src_server_app_ts",
-      "community": 1,
+      "community": 2,
       "norm_label": "app.ts"
     },
     {
@@ -486,7 +540,7 @@
       "source_file": "src/server/store.ts",
       "source_location": "L1",
       "id": "src_server_store_ts",
-      "community": 1,
+      "community": 2,
       "norm_label": "store.ts"
     },
     {
@@ -516,7 +570,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "dist-server/server/store.js",
-      "source_location": "L77",
+      "source_location": "L118",
       "weight": 1.0,
       "_src": "dist_server_server_store_js",
       "_tgt": "store_normalizechannel",
@@ -525,10 +579,22 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dist-server/server/store.js",
+      "source_location": "L124",
+      "weight": 1.0,
+      "_src": "dist_server_server_store_js",
+      "_tgt": "store_parseprofilepresence",
+      "source": "dist_server_server_store_js",
+      "target": "store_parseprofilepresence",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/server/store.ts",
-      "source_location": "L28",
+      "source_location": "L43",
       "weight": 1.0,
       "_src": "store_jsonmessagestore",
       "_tgt": "store_jsonmessagestore_constructor",
@@ -540,7 +606,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/server/store.ts",
-      "source_location": "L30",
+      "source_location": "L45",
       "weight": 1.0,
       "_src": "store_jsonmessagestore",
       "_tgt": "store_jsonmessagestore_open",
@@ -552,7 +618,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/server/store.ts",
-      "source_location": "L45",
+      "source_location": "L60",
       "weight": 1.0,
       "_src": "store_jsonmessagestore",
       "_tgt": "store_jsonmessagestore_createmessage",
@@ -564,7 +630,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/server/store.ts",
-      "source_location": "L67",
+      "source_location": "L84",
       "weight": 1.0,
       "_src": "store_jsonmessagestore",
       "_tgt": "store_jsonmessagestore_listmessages",
@@ -576,7 +642,43 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/server/store.ts",
-      "source_location": "L86",
+      "source_location": "L103",
+      "weight": 1.0,
+      "_src": "store_jsonmessagestore",
+      "_tgt": "store_jsonmessagestore_updateprofilestatus",
+      "source": "store_jsonmessagestore",
+      "target": "store_jsonmessagestore_updateprofilestatus",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/server/store.ts",
+      "source_location": "L116",
+      "weight": 1.0,
+      "_src": "store_jsonmessagestore",
+      "_tgt": "store_jsonmessagestore_listprofilestatuses",
+      "source": "store_jsonmessagestore",
+      "target": "store_jsonmessagestore_listprofilestatuses",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/server/store.ts",
+      "source_location": "L133",
+      "weight": 1.0,
+      "_src": "store_jsonmessagestore",
+      "_tgt": "store_jsonmessagestore_setprofilestatus",
+      "source": "store_jsonmessagestore",
+      "target": "store_jsonmessagestore_setprofilestatus",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/server/store.ts",
+      "source_location": "L145",
       "weight": 1.0,
       "_src": "store_jsonmessagestore",
       "_tgt": "store_jsonmessagestore_persist",
@@ -588,7 +690,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/server/store.ts",
-      "source_location": "L27",
+      "source_location": "L42",
       "weight": 1.0,
       "_src": "src_server_store_ts",
       "_tgt": "store_jsonmessagestore",
@@ -600,7 +702,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "src/server/store.ts",
-      "source_location": "L40",
+      "source_location": "L55",
       "weight": 1.0,
       "_src": "store_jsonmessagestore_open",
       "_tgt": "store_jsonmessagestore_persist",
@@ -612,7 +714,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "src/server/store.ts",
-      "source_location": "L46",
+      "source_location": "L61",
       "weight": 1.0,
       "_src": "store_jsonmessagestore_createmessage",
       "_tgt": "store_normalizechannel",
@@ -624,7 +726,19 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "src/server/store.ts",
-      "source_location": "L63",
+      "source_location": "L79",
+      "weight": 1.0,
+      "_src": "store_jsonmessagestore_createmessage",
+      "_tgt": "store_jsonmessagestore_setprofilestatus",
+      "source": "store_jsonmessagestore_createmessage",
+      "target": "store_jsonmessagestore_setprofilestatus",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src/server/store.ts",
+      "source_location": "L80",
       "weight": 1.0,
       "_src": "store_jsonmessagestore_createmessage",
       "_tgt": "store_jsonmessagestore_persist",
@@ -636,7 +750,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "src/server/store.ts",
-      "source_location": "L71",
+      "source_location": "L88",
       "weight": 1.0,
       "_src": "store_jsonmessagestore_listmessages",
       "_tgt": "store_normalizechannel",
@@ -645,14 +759,50 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src/server/store.ts",
+      "source_location": "L106",
+      "weight": 1.0,
+      "_src": "store_jsonmessagestore_updateprofilestatus",
+      "_tgt": "store_jsonmessagestore_setprofilestatus",
+      "source": "store_jsonmessagestore_updateprofilestatus",
+      "target": "store_jsonmessagestore_setprofilestatus",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src/server/store.ts",
+      "source_location": "L112",
+      "weight": 1.0,
+      "_src": "store_jsonmessagestore_updateprofilestatus",
+      "_tgt": "store_jsonmessagestore_persist",
+      "source": "store_jsonmessagestore_updateprofilestatus",
+      "target": "store_jsonmessagestore_persist",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/server/store.ts",
-      "source_location": "L93",
+      "source_location": "L152",
       "weight": 1.0,
       "_src": "src_server_store_ts",
       "_tgt": "store_normalizechannel",
       "source": "store_normalizechannel",
+      "target": "src_server_store_ts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/server/store.ts",
+      "source_location": "L158",
+      "weight": 1.0,
+      "_src": "src_server_store_ts",
+      "_tgt": "store_parseprofilepresence",
+      "source": "store_parseprofilepresence",
       "target": "src_server_store_ts",
       "confidence_score": 1.0
     },
@@ -1107,6 +1257,18 @@
       "source_location": "L15",
       "weight": 1.0,
       "_src": "src_client_api_ts",
+      "_tgt": "api_fetchprofilestatuses",
+      "source": "src_client_api_ts",
+      "target": "api_fetchprofilestatuses",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/client/api.ts",
+      "source_location": "L21",
+      "weight": 1.0,
+      "_src": "src_client_api_ts",
       "_tgt": "api_postmessage",
       "source": "src_client_api_ts",
       "target": "api_postmessage",
@@ -1164,7 +1326,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L19",
+      "source_location": "L23",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_boot",
@@ -1176,7 +1338,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L46",
+      "source_location": "L50",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_load",
@@ -1189,6 +1351,18 @@
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
       "source_location": "L64",
+      "weight": 1.0,
+      "_src": "src_client_app_tsx",
+      "_tgt": "app_refreshstatuses",
+      "source": "src_client_app_tsx",
+      "target": "app_refreshstatuses",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/client/App.tsx",
+      "source_location": "L74",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_handlesubmit",

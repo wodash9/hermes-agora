@@ -9,6 +9,8 @@ describe('server config', () => {
   it('loads default BTC agent profiles', () => {
     const config = loadServerConfig({ HUB_AGENT_TOKEN: 'dev-secret' });
     expect(config.agentProfiles['seldon-ceo'].displayName).toBe('Seldon');
+    expect(config.agentProfiles['daneel-cto'].displayName).toBe('Daneel');
+    expect(config.agentProfiles['cordelia-success'].displayName).toBe('Cordelia');
     expect(config.agentProfiles['columbo-qa'].scopes).toContain('messages:write');
   });
 });

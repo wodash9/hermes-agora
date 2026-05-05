@@ -2,6 +2,8 @@ export type ParticipantType = 'human' | 'agent' | 'system';
 
 export type AgentScope = 'messages:read' | 'messages:write' | 'admin';
 
+export type ProfilePresence = 'online' | 'idle' | 'offline' | 'blocked' | 'unknown';
+
 export interface Author {
   type: ParticipantType;
   profileId: string;
@@ -29,6 +31,22 @@ export interface AgentProfileConfig {
   displayName: string;
   scopes: AgentScope[];
   channels: string[];
+}
+
+export interface ProfileStatus {
+  profileId: string;
+  displayName: string;
+  status: ProfilePresence;
+  channels: string[];
+  scopes: AgentScope[];
+  lastSeenAt: string | null;
+  lastMessageAt: string | null;
+  note: string | null;
+}
+
+export interface ProfileStatusResponse {
+  profiles: ProfileStatus[];
+  generatedAt: string;
 }
 
 export interface Identity {

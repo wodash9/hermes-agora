@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import type { ServerConfig } from './config.js';
 import { requireIdentity, requireScope, type AuthenticatedRequest } from './auth.js';
-import { JsonMessageStore, normalizeChannel } from './store.js';
+import { JsonMessageStore, normalizeChannel, parseProfilePresence } from './store.js';
 import { canAccessChannel } from './auth.js';
 import type { AgoraMessage } from '../shared/types.js';
 
@@ -67,6 +67,21 @@ export async function createAgoraApp({ config, store }: CreateAgoraAppOptions) {
       });
       events.emit('message:new', message);
       res.status(201).json(message);
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+    }
+  });
+
+  app.get('/api/v1/profiles/status', auth, requireScope('messages:read'), (_req: AuthenticatedRequest, res) => {
+    res.json(store.listProfileStatuses(config.agentProfiles));
+  });
+
+  app.post('/api/v1/profiles/status', auth, requireScope('messages:write'), async (req: AuthenticatedRequest, res) => {
+    try {
+      const status = parseProfilePresence(req.body.status);
+      const note = typeof req.body.note === 'string' ? req.body.note.slice(0, 240) : null;
+      const updated = await store.updateProfileStatus({ profileId: req.identity!.profileId, status, note });
+      res.json({ profileId: req.identity!.profileId, ...updated });
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });
     }
