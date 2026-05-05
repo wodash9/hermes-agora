@@ -142,6 +142,17 @@ export function App() {
   const activeGroup = groups.find((group) => group.id === activeGroupId) ?? null;
   const activeMessages = activeView === 'group' && activeGroupId ? groupMessages[activeGroupId] ?? [] : messages;
   const recipientOptions = useMemo(() => buildRecipientOptions(activeGroup, profiles), [activeGroup, profiles]);
+  const activeChannelValue = activeView === 'group' && activeGroupId ? `group:${activeGroupId}` : activeView;
+
+  function handleChannelSelect(value: string) {
+    if (value.startsWith('group:')) {
+      setActiveGroupId(value.slice('group:'.length));
+      setActiveView('group');
+      return;
+    }
+    setActiveGroupId(null);
+    setActiveView(value as View);
+  }
 
   useEffect(() => {
     if (!activeGroup || (composerTargetProfileId !== DIRECTED_TARGET_ALL && !activeGroup.memberProfileIds.includes(composerTargetProfileId))) setComposerTargetProfileId(DIRECTED_TARGET_ALL);
@@ -151,6 +162,10 @@ export function App() {
     scrollMessagesToLatest(messagesRef.current);
   }, [activeMessages.length, activeGroupId, activeView]);
 
+  useLayoutEffect(() => {
+    document.querySelector('.sidebar .channel.active')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }, [activeView, activeGroupId]);
+
   if (isLoading) return <main className="center-card"><h1>Hermes Agora</h1><p>Inicializando hub interno…</p></main>;
   if (error) return <main className="center-card error"><h1>Hermes Agora</h1><p>{error}</p></main>;
   if (!token) return <LoginScreen onLogin={() => void initKeycloak(authConfig).then((kc) => kc?.login())} />;
@@ -158,7 +173,14 @@ export function App() {
   return (
     <main className="shell">
       <aside className="sidebar">
-        <div className="brand"><span>Ἀγορά</span><strong>Hermes Agora</strong></div>
+        <div className="brand"><span aria-label="Hermes Agora">Ἀ</span><strong>Hermes Agora</strong></div>
+        <label className="mobile-channel-select"><span>Chat</span>
+          <select value={activeChannelValue} onChange={(event) => handleChannelSelect(event.target.value)} aria-label="Seleccionar conversación">
+            <option value="chat"># general</option>
+            <option value="monitor">Monitor</option>
+            {groups.map((group) => <option key={group.id} value={`group:${group.id}`}>@ {group.name}</option>)}
+          </select>
+        </label>
         <button className={`channel ${activeView === 'chat' ? 'active' : ''}`} onClick={() => { setActiveView('chat'); setActiveGroupId(null); }}># general</button>
         <button className={`channel ${activeView === 'monitor' ? 'active' : ''}`} onClick={() => setActiveView('monitor')}>◉ monitor agentes</button>
         <section className="group-list">
@@ -166,7 +188,7 @@ export function App() {
           {groups.map((group) => <button key={group.id} className={`channel group-channel ${activeGroupId === group.id ? 'active' : ''}`} onClick={() => { setActiveView('group'); setActiveGroupId(group.id); }}>@ {group.name}</button>)}
           {groups.length === 0 && <p>No hay grupos todavía.</p>}
         </section>
-        <button className="mobile-admin-toggle" onClick={() => setIsGroupAdminOpen((current) => !current)}>{isGroupAdminOpen ? 'Cerrar gestión' : 'Gestionar grupos'}</button>
+        <button className="mobile-admin-toggle" onClick={() => setIsGroupAdminOpen((current) => !current)}>{isGroupAdminOpen ? 'Cerrar' : 'Grupos'}</button>
         <section className="identity">
           <small>Conectado como</small>
           <strong>{identity?.displayName ?? 'Operador'}</strong>
@@ -203,7 +225,7 @@ export function App() {
               </select>
             </label>
             <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={composerPlaceholder(composerAction, activeGroup?.name)} />
-            <button>Enviar</button>
+            <button aria-label="Enviar mensaje"><span className="send-text">Enviar</span><span className="send-icon" aria-hidden="true">➤</span></button>
           </form>
         </section>
       )}
@@ -341,7 +363,7 @@ function composerPlaceholder(action: ComposerAction, groupName?: string): string
   if (action === 'DONE') return `ID y resultado${target}: BTC-001 — completado…`;
   if (action === 'BLOCKED') return `ID y bloqueo${target}: BTC-001 — falta contexto…`;
   if (action === 'QA') return `Revisión QA${target}: criterios, hallazgos…`;
-  return groupName ? `Mensaje para ${groupName}…` : 'Escribe un mensaje o elige TASK / DONE / BLOCKED / QA…';
+  return 'Mensaje…';
 }
 
 function formatDate(value: string | null) {

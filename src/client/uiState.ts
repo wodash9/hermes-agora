@@ -4,7 +4,7 @@ export type ComposerAction = 'NONE' | 'TASK' | 'DONE' | 'BLOCKED' | 'QA';
 export const DIRECTED_TARGET_ALL = '__all__';
 
 export const ACTION_OPTIONS: Array<{ value: ComposerAction; label: string; hint: string }> = [
-  { value: 'NONE', label: 'Mensaje', hint: 'Mensaje libre sin protocolo' },
+  { value: 'NONE', label: 'MSG', hint: 'Mensaje libre sin protocolo' },
   { value: 'TASK', label: 'TASK', hint: 'Nueva tarea accionable para agentes' },
   { value: 'DONE', label: 'DONE', hint: 'Resultado completado' },
   { value: 'BLOCKED', label: 'BLOCKED', hint: 'Bloqueo con motivo' },

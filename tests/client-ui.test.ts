@@ -92,17 +92,50 @@ describe('mobile-responsive Agora layout CSS', () => {
 
   it('defines mobile breakpoints for composer and side panels', () => {
     expect(css).toContain('@media (max-width: 760px)');
-    expect(css).toContain('.composer { grid-template-columns: 1fr;');
-    expect(css).toContain('.sidebar { position: sticky; top: 0; z-index: 20;');
+    expect(css).toContain('.composer { grid-template-columns: minmax(72px, 82px) minmax(0, 1fr) 44px;');
+    expect(css).toContain('.sidebar { flex-direction: row; align-items: center; overflow-x: auto; position: sticky; top: 0; z-index: 20;');
   });
 
   it('keeps the chat composer pinned to the viewport bottom and scrolls only messages', () => {
+    expect(css).toContain('html, body, #root { min-height: 100%; height: 100%; }');
     expect(css).toContain('body { margin: 0; min-height: 100vh; height: 100vh; overflow: hidden;');
     expect(css).toContain('.shell { height: 100vh; max-height: 100vh; overflow: hidden;');
     expect(css).toContain('.chat, .monitor { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-height: 0; overflow: hidden;');
     expect(css).toContain('.messages { min-height: 0;');
     expect(css).toContain('.composer { position: sticky; bottom: 0;');
     expect(css).toContain('.shell { height: 100dvh; max-height: 100dvh;');
+  });
+
+  it('uses mobile chat-app patterns: horizontal channel rail, bubbles and compact send control', () => {
+    const appSource = readFileSync(join(process.cwd(), 'src/client/App.tsx'), 'utf8');
+    expect(css).toContain('.sidebar { flex-direction: row; align-items: center; overflow-x: auto;');
+    expect(css).toContain('.sidebar > .channel, .group-list { display: none; }');
+    expect(css).toContain('.message.human { align-self: flex-end;');
+    expect(css).toContain('.message.agent { align-self: flex-start;');
+    expect(css).toContain('.composer { grid-template-columns: minmax(72px, 82px) minmax(0, 1fr) 44px;');
+    expect(appSource).toContain('<span className="send-icon" aria-hidden="true">➤</span>');
+  });
+
+  it('keeps the active mobile channel visible inside the horizontal rail', () => {
+    const appSource = readFileSync(join(process.cwd(), 'src/client/App.tsx'), 'utf8');
+    expect(appSource).toContain("document.querySelector('.sidebar .channel.active')?.scrollIntoView({ block: 'nearest', inline: 'center' });");
+    expect(appSource).toContain('}, [activeView, activeGroupId]);');
+  });
+
+  it('uses a compact mobile channel selector instead of overflowing navigation buttons', () => {
+    const appSource = readFileSync(join(process.cwd(), 'src/client/App.tsx'), 'utf8');
+    expect(appSource).toContain('className="mobile-channel-select"');
+    expect(appSource).toContain("value={`group:${group.id}`}");
+    expect(css).toContain('.mobile-channel-select { display: none; }');
+    expect(css).toContain('.sidebar > .channel, .group-list { display: none; }');
+    expect(css).toContain('.mobile-channel-select { display: grid; flex: 1 1 auto;');
+    expect(css).not.toContain('.group-list { display: contents; }');
+  });
+
+  it('allows local mobile QA to point the Vite proxy at a non-default API port', () => {
+    const viteConfig = readFileSync(join(process.cwd(), 'vite.config.ts'), 'utf8');
+    expect(viteConfig).toContain('process.env.VITE_DEV_API_PROXY_TARGET');
+    expect(viteConfig).toContain("const apiProxyTarget = process.env.VITE_DEV_API_PROXY_TARGET ?? 'http://127.0.0.1:3000';");
   });
 
   it('wires the messages list to auto-scroll when the active chat receives or loads messages', () => {
