@@ -45,4 +45,20 @@ describe('mobile-responsive Agora layout CSS', () => {
     expect(css).toContain('.composer { grid-template-columns: 1fr;');
     expect(css).toContain('.sidebar { position: sticky; top: 0; z-index: 20;');
   });
+
+  it('keeps the chat composer pinned to the viewport bottom and scrolls only messages', () => {
+    expect(css).toContain('body { margin: 0; min-height: 100vh; height: 100vh; overflow: hidden;');
+    expect(css).toContain('.shell { height: 100vh; max-height: 100vh; overflow: hidden;');
+    expect(css).toContain('.chat, .monitor { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-height: 0; overflow: hidden;');
+    expect(css).toContain('.messages { min-height: 0;');
+    expect(css).toContain('.composer { position: sticky; bottom: 0;');
+    expect(css).toContain('.shell { height: 100dvh; max-height: 100dvh;');
+  });
+
+  it('keeps the group admin panel out of document flow on tablet and mobile widths', () => {
+    expect(css).toContain('@media (max-width: 1100px)');
+    expect(css).toContain('.group-admin { position: fixed; right: 0; top: 0; bottom: 0;');
+    expect(css).toContain('.group-admin.collapsed { display: none; }');
+    expect(css).toContain('.mobile-admin-toggle { display: block; }');
+  });
 });
