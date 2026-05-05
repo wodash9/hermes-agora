@@ -1,19 +1,22 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { io } from 'socket.io-client';
-import type { AgoraMessage, Identity, ProfileStatus } from '../shared/types';
+import type { AgoraGroup, AgoraMessage, Identity, ProfileStatus } from '../shared/types';
 import { createClientAuthConfig, initKeycloak, isMockAllowed } from './auth';
-import { fetchIdentity, fetchMessages, fetchProfileStatuses, postMessage } from './api';
+import { createGroup, deleteGroup, fetchGroupMessages, fetchGroups, fetchIdentity, fetchMessages, fetchProfileStatuses, postGroupMessage, postMessage, updateGroup } from './api';
 import './styles.css';
 
-type View = 'chat' | 'monitor';
+type View = 'chat' | 'monitor' | 'group';
 
 export function App() {
   const authConfig = useMemo(() => createClientAuthConfig(import.meta.env), []);
   const [token, setToken] = useState<string | null>(null);
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [messages, setMessages] = useState<AgoraMessage[]>([]);
+  const [groupMessages, setGroupMessages] = useState<Record<string, AgoraMessage[]>>({});
   const [profiles, setProfiles] = useState<ProfileStatus[]>([]);
+  const [groups, setGroups] = useState<AgoraGroup[]>([]);
   const [activeView, setActiveView] = useState<View>('chat');
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -25,7 +28,7 @@ export function App() {
         if (authConfig.mode === 'mock') {
           if (!isMockAllowed()) throw new Error('Mock auth is local-only');
           setToken('change-me-dev-token');
-          setIdentity({ type: 'agent', profileId: 'seldon-ceo', displayName: 'Seldon', scopes: ['messages:read', 'messages:write'], channels: ['general'] });
+          setIdentity({ type: 'agent', profileId: 'seldon-ceo', displayName: 'Seldon', scopes: ['messages:read', 'messages:write', 'admin'], channels: ['general'] });
           setIsLoading(false);
           return;
         }
@@ -49,11 +52,12 @@ export function App() {
     let active = true;
     async function load() {
       try {
-        const [me, history, statusResponse] = await Promise.all([fetchIdentity(token!), fetchMessages(token!), fetchProfileStatuses(token!)]);
+        const [me, history, statusResponse, groupResponse] = await Promise.all([fetchIdentity(token!), fetchMessages(token!), fetchProfileStatuses(token!), fetchGroups(token!)]);
         if (!active) return;
         setIdentity(me);
         setMessages(history.messages);
         setProfiles(statusResponse.profiles);
+        setGroups(groupResponse.groups);
         setIsLoading(false);
       } catch (err) {
         setError((err as Error).message);
@@ -62,14 +66,24 @@ export function App() {
     }
     load();
     const refreshStatuses = () => void fetchProfileStatuses(token).then((response) => active && setProfiles(response.profiles)).catch(() => undefined);
-    const interval = window.setInterval(refreshStatuses, 15_000);
+    const refreshGroups = () => void fetchGroups(token).then((response) => active && setGroups(response.groups)).catch(() => undefined);
+    const interval = window.setInterval(() => { refreshStatuses(); refreshGroups(); }, 15_000);
     const socket = io({ auth: { token } });
     socket.on('message:new', (message: AgoraMessage) => {
-      setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message]);
+      if (message.groupId) {
+        setGroupMessages((current) => ({ ...current, [message.groupId!]: appendUnique(current[message.groupId!] ?? [], message) }));
+      } else {
+        setMessages((current) => appendUnique(current, message));
+      }
       refreshStatuses();
     });
     return () => { active = false; window.clearInterval(interval); socket.close(); };
   }, [token]);
+
+  useEffect(() => {
+    if (!token || !activeGroupId || groupMessages[activeGroupId]) return;
+    void fetchGroupMessages(token, activeGroupId).then((history) => setGroupMessages((current) => ({ ...current, [activeGroupId]: history.messages }))).catch((err) => setError((err as Error).message));
+  }, [token, activeGroupId, groupMessages]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -77,8 +91,13 @@ export function App() {
     const text = draft;
     setDraft('');
     try {
-      const message = await postMessage(token, text);
-      setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message]);
+      if (activeView === 'group' && activeGroupId) {
+        const message = await postGroupMessage(token, activeGroupId, text);
+        setGroupMessages((current) => ({ ...current, [activeGroupId]: appendUnique(current[activeGroupId] ?? [], message) }));
+      } else {
+        const message = await postMessage(token, text);
+        setMessages((current) => appendUnique(current, message));
+      }
       const statusResponse = await fetchProfileStatuses(token);
       setProfiles(statusResponse.profiles);
     } catch (err) {
@@ -86,6 +105,34 @@ export function App() {
       setDraft(text);
     }
   }
+
+  async function handleSaveGroup(name: string, memberProfileIds: string[], groupId?: string) {
+    if (!token) return;
+    const group = groupId ? await updateGroup(token, groupId, name, memberProfileIds) : await createGroup(token, name, memberProfileIds);
+    const groupResponse = await fetchGroups(token);
+    setGroups(groupResponse.groups);
+    setActiveGroupId(group.id);
+    setActiveView('group');
+  }
+
+  async function handleDeleteGroup(groupId: string) {
+    if (!token) return;
+    await deleteGroup(token, groupId);
+    const groupResponse = await fetchGroups(token);
+    setGroups(groupResponse.groups);
+    setGroupMessages((current) => {
+      const next = { ...current };
+      delete next[groupId];
+      return next;
+    });
+    if (activeGroupId === groupId) {
+      setActiveGroupId(null);
+      setActiveView('chat');
+    }
+  }
+
+  const activeGroup = groups.find((group) => group.id === activeGroupId) ?? null;
+  const activeMessages = activeView === 'group' && activeGroupId ? groupMessages[activeGroupId] ?? [] : messages;
 
   if (isLoading) return <main className="center-card"><h1>Hermes Agora</h1><p>Inicializando hub interno…</p></main>;
   if (error) return <main className="center-card error"><h1>Hermes Agora</h1><p>{error}</p></main>;
@@ -95,32 +142,107 @@ export function App() {
     <main className="shell">
       <aside className="sidebar">
         <div className="brand"><span>Ἀγορά</span><strong>Hermes Agora</strong></div>
-        <button className={`channel ${activeView === 'chat' ? 'active' : ''}`} onClick={() => setActiveView('chat')}># general</button>
+        <button className={`channel ${activeView === 'chat' ? 'active' : ''}`} onClick={() => { setActiveView('chat'); setActiveGroupId(null); }}># general</button>
         <button className={`channel ${activeView === 'monitor' ? 'active' : ''}`} onClick={() => setActiveView('monitor')}>◉ monitor agentes</button>
+        <section className="group-list">
+          <small>Grupos</small>
+          {groups.map((group) => <button key={group.id} className={`channel group-channel ${activeGroupId === group.id ? 'active' : ''}`} onClick={() => { setActiveView('group'); setActiveGroupId(group.id); }}>@ {group.name}</button>)}
+          {groups.length === 0 && <p>No hay grupos todavía.</p>}
+        </section>
         <section className="identity">
           <small>Conectado como</small>
           <strong>{identity?.displayName ?? 'Operador'}</strong>
           <span>{identity?.type ?? 'human'}</span>
         </section>
       </aside>
-      {activeView === 'chat' ? (
+      {activeView === 'monitor' ? <MonitorScreen profiles={profiles} /> : (
         <section className="chat">
-          <header className="chat-header"><h1># general</h1><p>Bus interno para perfiles Hermes. Protocolo: TASK / DONE / BLOCKED / QA.</p></header>
+          <header className="chat-header">
+            <h1>{activeGroup ? `@ ${activeGroup.name}` : '# general'}</h1>
+            <p>{activeGroup ? `Grupo privado: ${activeGroup.memberProfileIds.join(', ')}` : 'Bus interno para perfiles Hermes. Protocolo: TASK / DONE / BLOCKED / QA.'}</p>
+          </header>
           <ol className="messages">
-            {messages.map((message) => <li key={message.id} className={`message ${message.author.type}`}>
+            {activeMessages.map((message) => <li key={message.id} className={`message ${message.author.type}`}>
               <div className="message-meta"><strong>{message.author.displayName}</strong><span>{message.author.type}</span><time>{new Date(message.createdAt).toLocaleString()}</time></div>
               <p>{message.text}</p>
             </li>)}
-            {messages.length === 0 && <li className="empty">Todavía no hay mensajes. Envía el primer TASK.</li>}
+            {activeMessages.length === 0 && <li className="empty">Todavía no hay mensajes aquí.</li>}
           </ol>
           <form className="composer" onSubmit={handleSubmit}>
-            <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Escribe un TASK, DONE, BLOCKED o QA…" />
+            <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={activeGroup ? `Mensaje para ${activeGroup.name}…` : 'Escribe un TASK, DONE, BLOCKED o QA…'} />
             <button>Enviar</button>
           </form>
         </section>
-      ) : <MonitorScreen profiles={profiles} />}
+      )}
+      <GroupAdminPanel groups={groups} profiles={profiles} onSave={handleSaveGroup} onDelete={handleDeleteGroup} />
     </main>
   );
+}
+
+function GroupAdminPanel({ groups, profiles, onSave, onDelete }: { groups: AgoraGroup[]; profiles: ProfileStatus[]; onSave: (name: string, memberProfileIds: string[], groupId?: string) => Promise<void>; onDelete: (groupId: string) => Promise<void> }) {
+  const [selectedGroupId, setSelectedGroupId] = useState('new');
+  const selectedGroup = groups.find((group) => group.id === selectedGroupId);
+  const [name, setName] = useState('');
+  const [members, setMembers] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setName(selectedGroup?.name ?? '');
+    setMembers(selectedGroup?.memberProfileIds ?? []);
+  }, [selectedGroup]);
+
+  async function save(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    try {
+      await onSave(name, members, selectedGroup?.id);
+      if (!selectedGroup) {
+        setSelectedGroupId('new');
+        setName('');
+        setMembers([]);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeSelected() {
+    if (!selectedGroup) return;
+    setBusy(true);
+    try {
+      await onDelete(selectedGroup.id);
+      setSelectedGroupId('new');
+      setName('');
+      setMembers([]);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <aside className="group-admin">
+    <h2>Grupos</h2>
+    <p>Crea salas privadas y asigna perfiles Hermes.</p>
+    <label>Editar
+      <select value={selectedGroupId} onChange={(event) => setSelectedGroupId(event.target.value)}>
+        <option value="new">Nuevo grupo</option>
+        {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+      </select>
+    </label>
+    <form onSubmit={save}>
+      <label>Nombre
+        <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ej. Equipo legal" />
+      </label>
+      <fieldset>
+        <legend>Perfiles asignados</legend>
+        {profiles.map((profile) => <label key={profile.profileId} className="checkbox-row">
+          <input type="checkbox" checked={members.includes(profile.profileId)} onChange={(event) => setMembers((current) => event.target.checked ? [...current, profile.profileId] : current.filter((id) => id !== profile.profileId))} />
+          <span>{profile.displayName}</span><code>{profile.profileId}</code>
+        </label>)}
+      </fieldset>
+      <button disabled={busy || !name.trim() || members.length === 0}>{busy ? 'Guardando…' : selectedGroup ? 'Actualizar grupo' : 'Crear grupo'}</button>
+      {selectedGroup && <button className="danger" type="button" disabled={busy} onClick={removeSelected}>Eliminar grupo</button>}
+    </form>
+  </aside>;
 }
 
 function MonitorScreen({ profiles }: { profiles: ProfileStatus[] }) {
@@ -152,6 +274,10 @@ function MonitorScreen({ profiles }: { profiles: ProfileStatus[] }) {
       </article>)}
     </div>
   </section>;
+}
+
+function appendUnique(messages: AgoraMessage[], message: AgoraMessage) {
+  return messages.some((item) => item.id === message.id) ? messages : [...messages, message];
 }
 
 function formatDate(value: string | null) {

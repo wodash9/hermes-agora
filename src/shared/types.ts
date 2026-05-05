@@ -14,6 +14,7 @@ export interface Author {
 export interface AgoraMessage {
   id: string;
   channel: string;
+  groupId?: string | null;
   text: string;
   author: Author;
   metadata?: Record<string, unknown>;
@@ -31,6 +32,20 @@ export interface AgentProfileConfig {
   displayName: string;
   scopes: AgentScope[];
   channels: string[];
+}
+
+export interface AgoraGroup {
+  id: string;
+  name: string;
+  memberProfileIds: string[];
+  createdAt: string;
+  updatedAt: string;
+  createdBy: Author;
+}
+
+export interface GroupListResponse {
+  groups: AgoraGroup[];
+  generatedAt: string;
 }
 
 export interface ProfileStatus {

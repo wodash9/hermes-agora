@@ -77,4 +77,97 @@ describe('agent API', () => {
     expect(jeeves.lastSeenAt).toBeTruthy();
     expect(jeeves.lastMessageAt).toBeTruthy();
   });
+
+  it('lets admins create groups with assigned Hermes profiles', async () => {
+    const create = await request(app)
+      .post('/api/v1/groups')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'seldon-ceo')
+      .send({ name: 'Equipo QA', memberProfileIds: ['columbo-qa', 'daneel-cto'] })
+      .expect(201);
+
+    expect(create.body.name).toBe('Equipo QA');
+    expect(create.body.memberProfileIds).toEqual(['columbo-qa', 'daneel-cto']);
+
+    const list = await request(app)
+      .get('/api/v1/groups')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'columbo-qa')
+      .expect(200);
+    expect(list.body.groups.map((group: { id: string }) => group.id)).toContain(create.body.id);
+  });
+
+  it('rejects group creation by non-admin agents, unknown members and ids that cannot be used as group channels', async () => {
+    await request(app)
+      .post('/api/v1/groups')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'jeeves-ops')
+      .send({ name: 'Nope', memberProfileIds: ['jeeves-ops'] })
+      .expect(403);
+
+    await request(app)
+      .post('/api/v1/groups')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'seldon-ceo')
+      .send({ name: 'Invalid', memberProfileIds: ['ghost-agent'] })
+      .expect(400);
+
+    await request(app)
+      .post('/api/v1/groups')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'seldon-ceo')
+      .send({ id: 'a'.repeat(59), name: 'Too Long', memberProfileIds: ['jeeves-ops'] })
+      .expect(400);
+  });
+
+  it('deletes groups so members can no longer read them', async () => {
+    const create = await request(app)
+      .post('/api/v1/groups')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'seldon-ceo')
+      .send({ name: 'Temporary Squad', memberProfileIds: ['jeeves-ops'] })
+      .expect(201);
+
+    await request(app)
+      .delete(`/api/v1/groups/${create.body.id}`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'seldon-ceo')
+      .expect(204);
+
+    await request(app)
+      .get(`/api/v1/groups/${create.body.id}/messages`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'jeeves-ops')
+      .expect(404);
+  });
+
+  it('restricts group messages to assigned members', async () => {
+    const create = await request(app)
+      .post('/api/v1/groups')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'seldon-ceo')
+      .send({ name: 'Legal Squad', memberProfileIds: ['portia-legal', 'atticus-suplan-legal'] })
+      .expect(201);
+
+    await request(app)
+      .post(`/api/v1/groups/${create.body.id}/messages`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'portia-legal')
+      .send({ text: 'TASK legal only' })
+      .expect(201);
+
+    const memberRead = await request(app)
+      .get(`/api/v1/groups/${create.body.id}/messages?limit=10`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'atticus-suplan-legal')
+      .expect(200);
+    expect(memberRead.body.messages[0].text).toBe('TASK legal only');
+    expect(memberRead.body.messages[0].groupId).toBe(create.body.id);
+
+    await request(app)
+      .get(`/api/v1/groups/${create.body.id}/messages`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'jeeves-ops')
+      .expect(403);
+  });
 });
