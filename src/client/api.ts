@@ -93,11 +93,12 @@ export async function postMessage(token: string, text: string, channel = 'genera
   return response.json();
 }
 
-export async function postGroupMessage(token: string, groupId: string, text: string): Promise<AgoraMessage> {
+export async function postGroupMessage(token: string, groupId: string, text: string, metadata?: Record<string, unknown>): Promise<AgoraMessage> {
+  const body = Object.keys(metadata ?? {}).length > 0 ? { text, metadata } : { text };
   const response = await fetch(`/api/v1/groups/${encodeURIComponent(groupId)}/messages`, {
     method: 'POST',
     headers: buildJsonHeaders(token),
-    body: JSON.stringify({ text })
+    body: JSON.stringify(body)
   });
   if (!response.ok) throw new Error(`Post group failed: ${response.status}`);
   return response.json();

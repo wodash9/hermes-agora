@@ -184,12 +184,34 @@ describe('agent API', () => {
       .send({ text: 'TASK legal only' })
       .expect(201);
 
+    const directed = await request(app)
+      .post(`/api/v1/groups/${create.body.id}/messages`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'portia-legal')
+      .send({ text: 'TASK legal directed', metadata: { targetProfileIds: ['atticus-suplan-legal'] } })
+      .expect(201);
+    expect(directed.body.metadata.targetProfileIds).toEqual(['atticus-suplan-legal']);
+
+    await request(app)
+      .post(`/api/v1/groups/${create.body.id}/messages`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'portia-legal')
+      .send({ text: 'TASK invalid target', metadata: { targetProfileIds: ['jeeves-ops'] } })
+      .expect(400);
+
+    await request(app)
+      .post(`/api/v1/groups/${create.body.id}/messages`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'portia-legal')
+      .send({ text: 'TASK empty directed target', metadata: { targetProfileIds: [] } })
+      .expect(400);
+
     const memberRead = await request(app)
       .get(`/api/v1/groups/${create.body.id}/messages?limit=10`)
       .set('Authorization', 'Bearer test-secret')
       .set('X-Hermes-Profile', 'atticus-suplan-legal')
       .expect(200);
-    expect(memberRead.body.messages[0].text).toBe('TASK legal only');
+    expect(memberRead.body.messages.map((message: { text: string }) => message.text)).toEqual(['TASK legal only', 'TASK legal directed']);
     expect(memberRead.body.messages[0].groupId).toBe(create.body.id);
 
     await request(app)

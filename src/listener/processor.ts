@@ -51,7 +51,7 @@ export class AgoraTaskListener {
   private readonly maxMessagesPerGroup: number;
 
   constructor(private readonly options: AgoraTaskListenerOptions) {
-    this.profiles = [...new Set(options.profiles.map((profile) => profile.trim()).filter(Boolean))];
+    this.profiles = [...new Set(options.profiles.map((profile) => profile.trim().toLowerCase()).filter(Boolean))];
     if (this.profiles.length === 0) throw new Error('At least one listener profile is required');
     const groups = options.groups?.map((group) => group.trim().toLowerCase()).filter(Boolean) ?? [];
     this.groupFilter = groups.length > 0 ? new Set(groups) : null;
@@ -152,13 +152,42 @@ export class AgoraTaskListener {
 }
 
 export function isActionableTaskForProfile(message: AgoraMessage, profileId: string): boolean {
-  if (message.author.profileId === profileId) return false;
-  if (message.metadata && message.metadata.listener === 'agora-listener') return false;
+  const normalizedProfileId = profileId.trim().toLowerCase();
+  if (message.author.profileId.trim().toLowerCase() === normalizedProfileId) return false;
+  if (isListenerResult(message)) return false;
+  const targetRead = readTargetProfileIds(message.metadata);
+  if (targetRead.present && !targetRead.valid) return false;
+  if (targetRead.targets.length > 0 && !targetRead.targets.includes(normalizedProfileId)) return false;
   return TASK_PATTERN.test(message.text.trim());
 }
 
 export function extractTaskId(text: string): string | null {
   return text.trim().match(TASK_PATTERN)?.[1] ?? null;
+}
+
+function readTargetProfileIds(metadata: AgoraMessage['metadata']): { present: boolean; valid: boolean; targets: string[] } {
+  if (!metadata || !Object.prototype.hasOwnProperty.call(metadata, 'targetProfileIds')) return { present: false, valid: true, targets: [] };
+  const value = metadata.targetProfileIds;
+  if (!Array.isArray(value)) return { present: true, valid: false, targets: [] };
+  const targets: string[] = [];
+  const seen = new Set<string>();
+  for (const item of value) {
+    if (typeof item !== 'string') return { present: true, valid: false, targets: [] };
+    const target = item.trim().toLowerCase();
+    if (!target) return { present: true, valid: false, targets: [] };
+    if (!seen.has(target)) {
+      seen.add(target);
+      targets.push(target);
+    }
+  }
+  return { present: true, valid: targets.length > 0, targets };
+}
+
+function isListenerResult(message: AgoraMessage): boolean {
+  const metadata = message.metadata;
+  if (metadata?.listener !== 'agora-listener') return false;
+  const statusResult = /^(DONE|BLOCKED|QA)\b/i.test(message.text.trim());
+  return statusResult && typeof metadata.sourceMessageId === 'string' && typeof metadata.taskId === 'string' && typeof metadata.ok === 'boolean';
 }
 
 export function buildHermesPrompt(profileId: string, group: AgoraGroup, message: AgoraMessage, taskId: string): string {

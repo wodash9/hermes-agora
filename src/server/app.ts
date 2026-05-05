@@ -144,12 +144,13 @@ export async function createAgoraApp({ config, store }: CreateAgoraAppOptions) {
   app.post('/api/v1/groups/:groupId/messages', auth, requireScope('messages:write'), async (req: AuthenticatedRequest, res) => {
     try {
       const group = requireGroupAccess(store, req.identity!, String(req.params.groupId));
+      const metadata = buildGroupMessageMetadata(req.body.metadata, group);
       const message = await store.createMessage({
         channel: `group-${group.id}`,
         groupId: group.id,
         text: typeof req.body.text === 'string' ? req.body.text : '',
         author: req.identity!,
-        metadata: typeof req.body.metadata === 'object' && req.body.metadata !== null ? req.body.metadata : {},
+        metadata,
         threadId: typeof req.body.threadId === 'string' ? req.body.threadId : null,
         replyTo: typeof req.body.replyTo === 'string' ? req.body.replyTo : null
       });
@@ -231,4 +232,25 @@ function parseMemberProfileIds(value: unknown, config: ServerConfig): string[] {
     }
   }
   return memberProfileIds;
+}
+
+function buildGroupMessageMetadata(value: unknown, group: AgoraGroup): Record<string, unknown> {
+  const metadata: Record<string, unknown> = typeof value === 'object' && value !== null && !Array.isArray(value) ? { ...(value as Record<string, unknown>) } : {};
+  if (!Object.prototype.hasOwnProperty.call(metadata, 'targetProfileIds')) return metadata;
+
+  if (!Array.isArray(metadata.targetProfileIds)) throw new Error('targetProfileIds must be an array');
+  const targets: string[] = [];
+  const seen = new Set<string>();
+  for (const item of metadata.targetProfileIds) {
+    if (typeof item !== 'string') throw new Error('Invalid target profile id');
+    const profileId = item.trim().toLowerCase();
+    if (!group.memberProfileIds.includes(profileId)) throw new Error(`Target profile is not a member of this group: ${profileId}`);
+    if (!seen.has(profileId)) {
+      seen.add(profileId);
+      targets.push(profileId);
+    }
+  }
+  if (targets.length === 0) throw new Error('targetProfileIds must include at least one group member');
+  metadata.targetProfileIds = targets;
+  return metadata;
 }

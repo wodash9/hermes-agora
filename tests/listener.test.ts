@@ -90,6 +90,96 @@ describe('AgoraTaskListener', () => {
     expect(client.statuses.map((item) => item.status)).toEqual(['online', 'idle']);
   });
 
+  it('runs only the selected profile when a TASK has targetProfileIds metadata', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'agora-listener-'));
+    const createdBy = { type: 'agent' as const, profileId: 'seldon-ceo', displayName: 'Seldon' };
+    const group: AgoraGroup = { id: 'ops', name: 'Ops', memberProfileIds: ['jeeves-ops', 'daneel-cto'], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), createdBy };
+    const targetedTask = message({ id: 'msg_targeted', text: 'TASK BTC-TARGET — solo Daneel', groupId: 'ops', metadata: { targetProfileIds: ['daneel-cto'] } });
+    const client = new FakeAgoraClient({ 'jeeves-ops': [group], 'daneel-cto': [group] }, { ops: [targetedTask] });
+    const runnerCalls: string[] = [];
+
+    const listener = new AgoraTaskListener({
+      client,
+      stateStore: new FileListenerStateStore(join(dir, 'state.json')),
+      runner: async ({ profileId }) => {
+        runnerCalls.push(profileId);
+        return { ok: true, output: `DONE for ${profileId}` };
+      },
+      profiles: ['jeeves-ops', 'daneel-cto'],
+      bootstrapMode: 'replay'
+    });
+
+    const result = await listener.tick();
+
+    expect(result.processed).toBe(1);
+    expect(result.skipped).toBe(1);
+    expect(runnerCalls).toEqual(['daneel-cto']);
+    expect(client.posted).toEqual([{ profileId: 'daneel-cto', groupId: 'ops', text: 'DONE for daneel-cto', replyTo: 'msg_targeted' }]);
+  });
+
+  it('normalizes selected listener profile ids before matching directed TASK targets', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'agora-listener-'));
+    const createdBy = { type: 'agent' as const, profileId: 'seldon-ceo', displayName: 'Seldon' };
+    const group: AgoraGroup = { id: 'ops', name: 'Ops', memberProfileIds: ['daneel-cto'], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), createdBy };
+    const client = new FakeAgoraClient({ 'daneel-cto': [group] }, { ops: [message({ id: 'msg_case', text: 'TASK BTC-CASE — procesa Daneel', groupId: 'ops', metadata: { targetProfileIds: ['daneel-cto'] } })] });
+    const runnerCalls: string[] = [];
+
+    const listener = new AgoraTaskListener({
+      client,
+      stateStore: new FileListenerStateStore(join(dir, 'state.json')),
+      runner: async ({ profileId }) => {
+        runnerCalls.push(profileId);
+        return { ok: true, output: `DONE for ${profileId}` };
+      },
+      profiles: ['DANEEL-CTO'],
+      bootstrapMode: 'replay'
+    });
+
+    await listener.tick();
+
+    expect(runnerCalls).toEqual(['daneel-cto']);
+    expect(client.posted[0]).toMatchObject({ profileId: 'daneel-cto', replyTo: 'msg_case' });
+  });
+
+  it('skips malformed directed TASK metadata instead of treating it as a broadcast', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'agora-listener-'));
+    const createdBy = { type: 'agent' as const, profileId: 'seldon-ceo', displayName: 'Seldon' };
+    const group: AgoraGroup = { id: 'ops', name: 'Ops', memberProfileIds: ['jeeves-ops'], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), createdBy };
+    const client = new FakeAgoraClient({ 'jeeves-ops': [group] }, { ops: [message({ id: 'msg_bad_target', text: 'TASK BTC-BAD — no ejecutar', groupId: 'ops', metadata: { targetProfileIds: 'jeeves-ops' } })] });
+    const listener = new AgoraTaskListener({
+      client,
+      stateStore: new FileListenerStateStore(join(dir, 'state.json')),
+      runner: async () => ({ ok: true, output: 'DONE should not run' }),
+      profiles: ['jeeves-ops'],
+      bootstrapMode: 'replay'
+    });
+
+    const result = await listener.tick();
+
+    expect(result.processed).toBe(0);
+    expect(result.skipped).toBe(1);
+    expect(client.posted).toHaveLength(0);
+  });
+
+  it('does not let user-supplied listener metadata hide an actionable TASK', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'agora-listener-'));
+    const createdBy = { type: 'agent' as const, profileId: 'seldon-ceo', displayName: 'Seldon' };
+    const group: AgoraGroup = { id: 'ops', name: 'Ops', memberProfileIds: ['jeeves-ops'], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), createdBy };
+    const client = new FakeAgoraClient({ 'jeeves-ops': [group] }, { ops: [message({ id: 'msg_spoof', text: 'TASK BTC-SPOOF — debe ejecutarse', groupId: 'ops', metadata: { listener: 'agora-listener' } })] });
+    const listener = new AgoraTaskListener({
+      client,
+      stateStore: new FileListenerStateStore(join(dir, 'state.json')),
+      runner: async () => ({ ok: true, output: 'DONE BTC-SPOOF' }),
+      profiles: ['jeeves-ops'],
+      bootstrapMode: 'replay'
+    });
+
+    const result = await listener.tick();
+
+    expect(result.processed).toBe(1);
+    expect(client.posted[0]).toMatchObject({ profileId: 'jeeves-ops', replyTo: 'msg_spoof', text: 'DONE BTC-SPOOF' });
+  });
+
   it('persists processed message ids so a second tick does not invoke the same TASK again', async () => {
     dir = mkdtempSync(join(tmpdir(), 'agora-listener-'));
     const group: AgoraGroup = {

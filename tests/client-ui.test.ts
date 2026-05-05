@@ -1,9 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
-import { ACTION_OPTIONS, applyComposerAction, toggleMemberSelection } from '../src/client/uiState';
-import { buildAuthHeaders, buildSocketAuth } from '../src/client/api';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ACTION_OPTIONS, DIRECTED_TARGET_ALL, applyComposerAction, buildRecipientOptions, buildTargetMetadata, toggleMemberSelection } from '../src/client/uiState';
+import { buildAuthHeaders, buildSocketAuth, postGroupMessage } from '../src/client/api';
 import { scrollMessagesToLatest } from '../src/client/scroll';
+
+afterEach(() => vi.restoreAllMocks());
 
 describe('client UI helpers', () => {
   it('offers explicit Agora action protocol options for the composer', () => {
@@ -21,6 +23,39 @@ describe('client UI helpers', () => {
     expect(toggleMemberSelection(['jeeves-ops'], 'daneel-cto', true)).toEqual(['jeeves-ops', 'daneel-cto']);
     expect(toggleMemberSelection(['jeeves-ops'], 'jeeves-ops', true)).toEqual(['jeeves-ops']);
     expect(toggleMemberSelection(['jeeves-ops', 'daneel-cto'], 'jeeves-ops', false)).toEqual(['daneel-cto']);
+  });
+
+  it('offers a directed recipient selector with all group participants plus a broadcast option', () => {
+    const options = buildRecipientOptions(
+      { id: 'ops', name: 'Ops', memberProfileIds: ['jeeves-ops', 'daneel-cto'], createdAt: '', updatedAt: '', createdBy: { type: 'agent', profileId: 'seldon-ceo', displayName: 'Seldon' } },
+      [
+        { profileId: 'daneel-cto', displayName: 'Daneel', status: 'online', channels: ['general'], scopes: ['messages:read'], lastSeenAt: null, lastMessageAt: null, note: null },
+        { profileId: 'jeeves-ops', displayName: 'Jeeves', status: 'idle', channels: ['general'], scopes: ['messages:read'], lastSeenAt: null, lastMessageAt: null, note: null },
+        { profileId: 'columbo-qa', displayName: 'Columbo', status: 'unknown', channels: ['general'], scopes: ['messages:read'], lastSeenAt: null, lastMessageAt: null, note: null }
+      ]
+    );
+
+    expect(options).toEqual([
+      { value: DIRECTED_TARGET_ALL, label: 'Todos los participantes' },
+      { value: 'daneel-cto', label: 'Daneel' },
+      { value: 'jeeves-ops', label: 'Jeeves' }
+    ]);
+  });
+
+  it('builds compact target metadata only when a specific group participant is selected', () => {
+    expect(buildTargetMetadata(DIRECTED_TARGET_ALL)).toEqual({});
+    expect(buildTargetMetadata('jeeves-ops')).toEqual({ targetProfileIds: ['jeeves-ops'] });
+  });
+
+  it('posts directed group messages with targetProfileIds metadata', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true, json: async () => ({ id: 'msg_1', text: 'TASK BTC-1', metadata: { targetProfileIds: ['jeeves-ops'] } }) } as Response);
+
+    await postGroupMessage('change-me-dev-token', 'ops', 'TASK BTC-1', { targetProfileIds: ['jeeves-ops'] });
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/groups/ops/messages', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ text: 'TASK BTC-1', metadata: { targetProfileIds: ['jeeves-ops'] } })
+    }));
   });
 
   it('adds mock profile identity to REST and socket auth only for the local mock token', () => {

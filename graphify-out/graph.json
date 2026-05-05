@@ -18,7 +18,7 @@
       "source_file": "dist-server/listener/redaction.js",
       "source_location": "L1",
       "id": "dist_server_listener_redaction_js",
-      "community": 3,
+      "community": 4,
       "norm_label": "redaction.js"
     },
     {
@@ -27,7 +27,7 @@
       "source_file": "src/listener/redaction.ts",
       "source_location": "L6",
       "id": "redaction_redactsensitive",
-      "community": 3,
+      "community": 4,
       "norm_label": "redactsensitive()"
     },
     {
@@ -144,7 +144,7 @@
       "source_file": "dist-server/listener/processor.js",
       "source_location": "L1",
       "id": "dist_server_listener_processor_js",
-      "community": 4,
+      "community": 3,
       "norm_label": "processor.js"
     },
     {
@@ -153,7 +153,7 @@
       "source_file": "src/listener/processor.ts",
       "source_location": "L47",
       "id": "processor_agoratasklistener",
-      "community": 4,
+      "community": 3,
       "norm_label": "agoratasklistener"
     },
     {
@@ -162,7 +162,7 @@
       "source_file": "src/listener/processor.ts",
       "source_location": "L53",
       "id": "processor_agoratasklistener_constructor",
-      "community": 4,
+      "community": 3,
       "norm_label": ".constructor()"
     },
     {
@@ -171,7 +171,7 @@
       "source_file": "src/listener/processor.ts",
       "source_location": "L62",
       "id": "processor_agoratasklistener_tick",
-      "community": 4,
+      "community": 3,
       "norm_label": ".tick()"
     },
     {
@@ -180,7 +180,7 @@
       "source_file": "src/listener/processor.ts",
       "source_location": "L118",
       "id": "processor_agoratasklistener_processtask",
-      "community": 4,
+      "community": 3,
       "norm_label": ".processtask()"
     },
     {
@@ -189,7 +189,7 @@
       "source_file": "src/listener/processor.ts",
       "source_location": "L145",
       "id": "processor_agoratasklistener_safestatus",
-      "community": 4,
+      "community": 3,
       "norm_label": ".safestatus()"
     },
     {
@@ -198,43 +198,61 @@
       "source_file": "src/listener/processor.ts",
       "source_location": "L154",
       "id": "processor_isactionabletaskforprofile",
-      "community": 4,
+      "community": 3,
       "norm_label": "isactionabletaskforprofile()"
     },
     {
       "label": "extractTaskId()",
       "file_type": "code",
       "source_file": "src/listener/processor.ts",
-      "source_location": "L160",
+      "source_location": "L164",
       "id": "processor_extracttaskid",
-      "community": 4,
+      "community": 3,
       "norm_label": "extracttaskid()"
+    },
+    {
+      "label": "readTargetProfileIds()",
+      "file_type": "code",
+      "source_file": "src/listener/processor.ts",
+      "source_location": "L168",
+      "id": "processor_readtargetprofileids",
+      "community": 3,
+      "norm_label": "readtargetprofileids()"
+    },
+    {
+      "label": "isListenerResult()",
+      "file_type": "code",
+      "source_file": "src/listener/processor.ts",
+      "source_location": "L186",
+      "id": "processor_islistenerresult",
+      "community": 3,
+      "norm_label": "islistenerresult()"
     },
     {
       "label": "buildHermesPrompt()",
       "file_type": "code",
       "source_file": "src/listener/processor.ts",
-      "source_location": "L164",
+      "source_location": "L193",
       "id": "processor_buildhermesprompt",
-      "community": 4,
+      "community": 3,
       "norm_label": "buildhermesprompt()"
     },
     {
       "label": "sanitizeAgentOutput()",
       "file_type": "code",
       "source_file": "src/listener/processor.ts",
-      "source_location": "L183",
+      "source_location": "L212",
       "id": "processor_sanitizeagentoutput",
-      "community": 4,
+      "community": 3,
       "norm_label": "sanitizeagentoutput()"
     },
     {
       "label": "blockedText()",
       "file_type": "code",
       "source_file": "src/listener/processor.ts",
-      "source_location": "L189",
+      "source_location": "L218",
       "id": "processor_blockedtext",
-      "community": 4,
+      "community": 3,
       "norm_label": "blockedtext()"
     },
     {
@@ -288,7 +306,7 @@
       "source_file": "dist-server/listener/client.js",
       "source_location": "L1",
       "id": "dist_server_listener_client_js",
-      "community": 3,
+      "community": 4,
       "norm_label": "client.js"
     },
     {
@@ -297,7 +315,7 @@
       "source_file": "src/listener/client.ts",
       "source_location": "L11",
       "id": "client_httpagoraclient",
-      "community": 3,
+      "community": 4,
       "norm_label": "httpagoraclient"
     },
     {
@@ -306,7 +324,7 @@
       "source_file": "src/listener/client.ts",
       "source_location": "L15",
       "id": "client_httpagoraclient_constructor",
-      "community": 3,
+      "community": 4,
       "norm_label": ".constructor()"
     },
     {
@@ -315,7 +333,7 @@
       "source_file": "src/listener/client.ts",
       "source_location": "L21",
       "id": "client_httpagoraclient_listgroups",
-      "community": 3,
+      "community": 4,
       "norm_label": ".listgroups()"
     },
     {
@@ -324,7 +342,7 @@
       "source_file": "src/listener/client.ts",
       "source_location": "L26",
       "id": "client_httpagoraclient_listgroupmessages",
-      "community": 3,
+      "community": 4,
       "norm_label": ".listgroupmessages()"
     },
     {
@@ -333,7 +351,7 @@
       "source_file": "src/listener/client.ts",
       "source_location": "L33",
       "id": "client_httpagoraclient_postgroupmessage",
-      "community": 3,
+      "community": 4,
       "norm_label": ".postgroupmessage()"
     },
     {
@@ -342,7 +360,7 @@
       "source_file": "src/listener/client.ts",
       "source_location": "L44",
       "id": "client_httpagoraclient_updatestatus",
-      "community": 3,
+      "community": 4,
       "norm_label": ".updatestatus()"
     },
     {
@@ -351,7 +369,7 @@
       "source_file": "src/listener/client.ts",
       "source_location": "L51",
       "id": "client_httpagoraclient_request",
-      "community": 3,
+      "community": 4,
       "norm_label": ".request()"
     },
     {
@@ -360,7 +378,7 @@
       "source_file": "src/listener/client.ts",
       "source_location": "L79",
       "id": "client_safeerrordetail",
-      "community": 3,
+      "community": 4,
       "norm_label": "safeerrordetail()"
     },
     {
@@ -727,7 +745,7 @@
       "label": "canManageGroups()",
       "file_type": "code",
       "source_file": "src/server/app.ts",
-      "source_location": "L199",
+      "source_location": "L200",
       "id": "app_canmanagegroups",
       "community": 1,
       "norm_label": "canmanagegroups()"
@@ -736,7 +754,7 @@
       "label": "isGroupMember()",
       "file_type": "code",
       "source_file": "src/server/app.ts",
-      "source_location": "L203",
+      "source_location": "L204",
       "id": "app_isgroupmember",
       "community": 1,
       "norm_label": "isgroupmember()"
@@ -745,7 +763,7 @@
       "label": "requireGroupAccess()",
       "file_type": "code",
       "source_file": "src/server/app.ts",
-      "source_location": "L207",
+      "source_location": "L208",
       "id": "app_requiregroupaccess",
       "community": 1,
       "norm_label": "requiregroupaccess()"
@@ -754,7 +772,7 @@
       "label": "groupAccessStatus()",
       "file_type": "code",
       "source_file": "src/server/app.ts",
-      "source_location": "L214",
+      "source_location": "L215",
       "id": "app_groupaccessstatus",
       "community": 1,
       "norm_label": "groupaccessstatus()"
@@ -763,10 +781,19 @@
       "label": "parseMemberProfileIds()",
       "file_type": "code",
       "source_file": "src/server/app.ts",
-      "source_location": "L220",
+      "source_location": "L221",
       "id": "app_parsememberprofileids",
       "community": 1,
       "norm_label": "parsememberprofileids()"
+    },
+    {
+      "label": "buildGroupMessageMetadata()",
+      "file_type": "code",
+      "source_file": "src/server/app.ts",
+      "source_location": "L237",
+      "id": "app_buildgroupmessagemetadata",
+      "community": 1,
+      "norm_label": "buildgroupmessagemetadata()"
     },
     {
       "label": "config.js",
@@ -954,7 +981,7 @@
       "source_file": "src/listener/client.ts",
       "source_location": "L1",
       "id": "src_listener_client_ts",
-      "community": 3,
+      "community": 4,
       "norm_label": "client.ts"
     },
     {
@@ -963,7 +990,7 @@
       "source_file": "src/listener/processor.ts",
       "source_location": "L1",
       "id": "src_listener_processor_ts",
-      "community": 4,
+      "community": 3,
       "norm_label": "processor.ts"
     },
     {
@@ -999,7 +1026,7 @@
       "source_file": "src/listener/redaction.ts",
       "source_location": "L1",
       "id": "src_listener_redaction_ts",
-      "community": 3,
+      "community": 4,
       "norm_label": "redaction.ts"
     },
     {
@@ -1195,7 +1222,7 @@
       "label": "applyComposerAction()",
       "file_type": "code",
       "source_file": "src/client/uiState.ts",
-      "source_location": "L13",
+      "source_location": "L16",
       "id": "uistate_applycomposeraction",
       "community": 11,
       "norm_label": "applycomposeraction()"
@@ -1204,10 +1231,28 @@
       "label": "toggleMemberSelection()",
       "file_type": "code",
       "source_file": "src/client/uiState.ts",
-      "source_location": "L20",
+      "source_location": "L23",
       "id": "uistate_togglememberselection",
       "community": 11,
       "norm_label": "togglememberselection()"
+    },
+    {
+      "label": "buildRecipientOptions()",
+      "file_type": "code",
+      "source_file": "src/client/uiState.ts",
+      "source_location": "L30",
+      "id": "uistate_buildrecipientoptions",
+      "community": 11,
+      "norm_label": "buildrecipientoptions()"
+    },
+    {
+      "label": "buildTargetMetadata()",
+      "file_type": "code",
+      "source_file": "src/client/uiState.ts",
+      "source_location": "L41",
+      "id": "uistate_buildtargetmetadata",
+      "community": 11,
+      "norm_label": "buildtargetmetadata()"
     },
     {
       "label": "App.tsx",
@@ -1222,7 +1267,7 @@
       "label": "boot()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L31",
+      "source_location": "L32",
       "id": "app_boot",
       "community": 7,
       "norm_label": "boot()"
@@ -1231,7 +1276,7 @@
       "label": "load()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L58",
+      "source_location": "L59",
       "id": "app_load",
       "community": 7,
       "norm_label": "load()"
@@ -1240,7 +1285,7 @@
       "label": "refreshStatuses()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L73",
+      "source_location": "L74",
       "id": "app_refreshstatuses",
       "community": 7,
       "norm_label": "refreshstatuses()"
@@ -1249,7 +1294,7 @@
       "label": "refreshGroups()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L74",
+      "source_location": "L75",
       "id": "app_refreshgroups",
       "community": 7,
       "norm_label": "refreshgroups()"
@@ -1258,7 +1303,7 @@
       "label": "handleSubmit()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L93",
+      "source_location": "L94",
       "id": "app_handlesubmit",
       "community": 7,
       "norm_label": "handlesubmit()"
@@ -1267,7 +1312,7 @@
       "label": "handleSaveGroup()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L116",
+      "source_location": "L117",
       "id": "app_handlesavegroup",
       "community": 7,
       "norm_label": "handlesavegroup()"
@@ -1276,7 +1321,7 @@
       "label": "handleDeleteGroup()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L125",
+      "source_location": "L126",
       "id": "app_handledeletegroup",
       "community": 7,
       "norm_label": "handledeletegroup()"
@@ -1285,7 +1330,7 @@
       "label": "save()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L220",
+      "source_location": "L231",
       "id": "app_save",
       "community": 7,
       "norm_label": "save()"
@@ -1294,7 +1339,7 @@
       "label": "removeSelected()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L237",
+      "source_location": "L248",
       "id": "app_removeselected",
       "community": 7,
       "norm_label": "removeselected()"
@@ -1671,7 +1716,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "dist-server/listener/processor.js",
-      "source_location": "L116",
+      "source_location": "L122",
       "weight": 1.0,
       "_src": "dist_server_listener_processor_js",
       "_tgt": "processor_extracttaskid",
@@ -1683,7 +1728,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "dist-server/listener/processor.js",
-      "source_location": "L119",
+      "source_location": "L125",
+      "weight": 1.0,
+      "_src": "dist_server_listener_processor_js",
+      "_tgt": "processor_readtargetprofileids",
+      "source": "dist_server_listener_processor_js",
+      "target": "processor_readtargetprofileids",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dist-server/listener/processor.js",
+      "source_location": "L146",
+      "weight": 1.0,
+      "_src": "dist_server_listener_processor_js",
+      "_tgt": "processor_islistenerresult",
+      "source": "dist_server_listener_processor_js",
+      "target": "processor_islistenerresult",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dist-server/listener/processor.js",
+      "source_location": "L153",
       "weight": 1.0,
       "_src": "dist_server_listener_processor_js",
       "_tgt": "processor_buildhermesprompt",
@@ -1695,7 +1764,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "dist-server/listener/processor.js",
-      "source_location": "L137",
+      "source_location": "L171",
       "weight": 1.0,
       "_src": "dist_server_listener_processor_js",
       "_tgt": "processor_sanitizeagentoutput",
@@ -1707,7 +1776,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "dist-server/listener/processor.js",
-      "source_location": "L143",
+      "source_location": "L177",
       "weight": 1.0,
       "_src": "dist_server_listener_processor_js",
       "_tgt": "processor_blockedtext",
@@ -1860,6 +1929,30 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src/listener/processor.ts",
+      "source_location": "L157",
+      "weight": 1.0,
+      "_src": "processor_isactionabletaskforprofile",
+      "_tgt": "processor_islistenerresult",
+      "source": "processor_isactionabletaskforprofile",
+      "target": "processor_islistenerresult",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src/listener/processor.ts",
+      "source_location": "L158",
+      "weight": 1.0,
+      "_src": "processor_isactionabletaskforprofile",
+      "_tgt": "processor_readtargetprofileids",
+      "source": "processor_isactionabletaskforprofile",
+      "target": "processor_readtargetprofileids",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/listener/processor.ts",
@@ -1875,7 +1968,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/listener/processor.ts",
-      "source_location": "L160",
+      "source_location": "L164",
       "weight": 1.0,
       "_src": "src_listener_processor_ts",
       "_tgt": "processor_extracttaskid",
@@ -1887,7 +1980,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/listener/processor.ts",
-      "source_location": "L164",
+      "source_location": "L168",
+      "weight": 1.0,
+      "_src": "src_listener_processor_ts",
+      "_tgt": "processor_readtargetprofileids",
+      "source": "processor_readtargetprofileids",
+      "target": "src_listener_processor_ts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/listener/processor.ts",
+      "source_location": "L186",
+      "weight": 1.0,
+      "_src": "src_listener_processor_ts",
+      "_tgt": "processor_islistenerresult",
+      "source": "processor_islistenerresult",
+      "target": "src_listener_processor_ts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/listener/processor.ts",
+      "source_location": "L193",
       "weight": 1.0,
       "_src": "src_listener_processor_ts",
       "_tgt": "processor_buildhermesprompt",
@@ -1899,7 +2016,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/listener/processor.ts",
-      "source_location": "L183",
+      "source_location": "L212",
       "weight": 1.0,
       "_src": "src_listener_processor_ts",
       "_tgt": "processor_sanitizeagentoutput",
@@ -1911,7 +2028,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/listener/processor.ts",
-      "source_location": "L189",
+      "source_location": "L218",
       "weight": 1.0,
       "_src": "src_listener_processor_ts",
       "_tgt": "processor_blockedtext",
@@ -3267,7 +3384,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "dist-server/server/app.js",
-      "source_location": "L184",
+      "source_location": "L185",
       "weight": 1.0,
       "_src": "dist_server_server_app_js",
       "_tgt": "app_canmanagegroups",
@@ -3279,7 +3396,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "dist-server/server/app.js",
-      "source_location": "L187",
+      "source_location": "L188",
       "weight": 1.0,
       "_src": "dist_server_server_app_js",
       "_tgt": "app_isgroupmember",
@@ -3291,7 +3408,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "dist-server/server/app.js",
-      "source_location": "L190",
+      "source_location": "L191",
       "weight": 1.0,
       "_src": "dist_server_server_app_js",
       "_tgt": "app_requiregroupaccess",
@@ -3303,7 +3420,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "dist-server/server/app.js",
-      "source_location": "L198",
+      "source_location": "L199",
       "weight": 1.0,
       "_src": "dist_server_server_app_js",
       "_tgt": "app_groupaccessstatus",
@@ -3315,12 +3432,24 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "dist-server/server/app.js",
-      "source_location": "L205",
+      "source_location": "L206",
       "weight": 1.0,
       "_src": "dist_server_server_app_js",
       "_tgt": "app_parsememberprofileids",
       "source": "dist_server_server_app_js",
       "target": "app_parsememberprofileids",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dist-server/server/app.js",
+      "source_location": "L224",
+      "weight": 1.0,
+      "_src": "dist_server_server_app_js",
+      "_tgt": "app_buildgroupmessagemetadata",
+      "source": "dist_server_server_app_js",
+      "target": "app_buildgroupmessagemetadata",
       "confidence_score": 1.0
     },
     {
@@ -3339,7 +3468,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "src/server/app.ts",
-      "source_location": "L204",
+      "source_location": "L205",
       "weight": 1.0,
       "_src": "app_isgroupmember",
       "_tgt": "app_canmanagegroups",
@@ -3351,7 +3480,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/server/app.ts",
-      "source_location": "L199",
+      "source_location": "L200",
       "weight": 1.0,
       "_src": "src_server_app_ts",
       "_tgt": "app_canmanagegroups",
@@ -3363,7 +3492,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "src/server/app.ts",
-      "source_location": "L210",
+      "source_location": "L211",
       "weight": 1.0,
       "_src": "app_requiregroupaccess",
       "_tgt": "app_isgroupmember",
@@ -3375,7 +3504,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/server/app.ts",
-      "source_location": "L203",
+      "source_location": "L204",
       "weight": 1.0,
       "_src": "src_server_app_ts",
       "_tgt": "app_isgroupmember",
@@ -3387,7 +3516,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/server/app.ts",
-      "source_location": "L207",
+      "source_location": "L208",
       "weight": 1.0,
       "_src": "src_server_app_ts",
       "_tgt": "app_requiregroupaccess",
@@ -3399,7 +3528,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/server/app.ts",
-      "source_location": "L214",
+      "source_location": "L215",
       "weight": 1.0,
       "_src": "src_server_app_ts",
       "_tgt": "app_groupaccessstatus",
@@ -3411,11 +3540,23 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/server/app.ts",
-      "source_location": "L220",
+      "source_location": "L221",
       "weight": 1.0,
       "_src": "src_server_app_ts",
       "_tgt": "app_parsememberprofileids",
       "source": "app_parsememberprofileids",
+      "target": "src_server_app_ts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/server/app.ts",
+      "source_location": "L237",
+      "weight": 1.0,
+      "_src": "src_server_app_ts",
+      "_tgt": "app_buildgroupmessagemetadata",
+      "source": "app_buildgroupmessagemetadata",
       "target": "src_server_app_ts",
       "confidence_score": 1.0
     },
@@ -4011,7 +4152,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "src/client/api.ts",
-      "source_location": "L99",
+      "source_location": "L100",
       "weight": 1.0,
       "_src": "api_postgroupmessage",
       "_tgt": "api_buildjsonheaders",
@@ -4071,7 +4212,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/uiState.ts",
-      "source_location": "L13",
+      "source_location": "L16",
       "weight": 1.0,
       "_src": "src_client_uistate_ts",
       "_tgt": "uistate_applycomposeraction",
@@ -4083,7 +4224,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/uiState.ts",
-      "source_location": "L20",
+      "source_location": "L23",
       "weight": 1.0,
       "_src": "src_client_uistate_ts",
       "_tgt": "uistate_togglememberselection",
@@ -4094,8 +4235,32 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "src/client/uiState.ts",
+      "source_location": "L30",
+      "weight": 1.0,
+      "_src": "src_client_uistate_ts",
+      "_tgt": "uistate_buildrecipientoptions",
+      "source": "src_client_uistate_ts",
+      "target": "uistate_buildrecipientoptions",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/client/uiState.ts",
+      "source_location": "L41",
+      "weight": 1.0,
+      "_src": "src_client_uistate_ts",
+      "_tgt": "uistate_buildtargetmetadata",
+      "source": "src_client_uistate_ts",
+      "target": "uistate_buildtargetmetadata",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L31",
+      "source_location": "L32",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_boot",
@@ -4107,7 +4272,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L58",
+      "source_location": "L59",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_load",
@@ -4119,7 +4284,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L73",
+      "source_location": "L74",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_refreshstatuses",
@@ -4131,7 +4296,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L74",
+      "source_location": "L75",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_refreshgroups",
@@ -4143,7 +4308,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L93",
+      "source_location": "L94",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_handlesubmit",
@@ -4155,7 +4320,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L116",
+      "source_location": "L117",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_handlesavegroup",
@@ -4167,7 +4332,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L125",
+      "source_location": "L126",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_handledeletegroup",
@@ -4179,7 +4344,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L220",
+      "source_location": "L231",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_save",
@@ -4191,7 +4356,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L237",
+      "source_location": "L248",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_removeselected",

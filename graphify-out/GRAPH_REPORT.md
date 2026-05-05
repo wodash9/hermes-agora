@@ -1,11 +1,11 @@
 # Graph Report - .  (2026-05-05)
 
 ## Corpus Check
-- 39 files · ~16,621 words
+- 39 files · ~18,200 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 154 nodes · 247 edges · 23 communities detected
+- 159 nodes · 257 edges · 23 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -43,8 +43,8 @@
 6. `FakeAgoraClient` - 6 edges
 7. `buildJsonHeaders()` - 6 edges
 8. `FileListenerStateStore` - 5 edges
-9. `readListenerConfig()` - 5 edges
-10. `verifyKeycloakToken()` - 5 edges
+9. `isActionableTaskForProfile()` - 5 edges
+10. `readListenerConfig()` - 5 edges
 
 ## Surprising Connections (you probably didn't know these)
 - None detected - all connections are within the same source files.
@@ -56,20 +56,20 @@ Cohesion: 0.21
 Nodes (8): JsonMessageStore, normalizeChannel(), normalizeGroupId(), normalizeGroupName(), normalizeMemberProfileIds(), parseProfilePresence(), slugifyGroupName(), uniqueGroupId()
 
 ### Community 1 - "Community 1"
-Cohesion: 0.19
-Nodes (12): canManageGroups(), createAgoraApp(), groupAccessStatus(), isGroupMember(), parseMemberProfileIds(), requireGroupAccess(), loadServerConfig(), parseProfiles() (+4 more)
+Cohesion: 0.18
+Nodes (13): buildGroupMessageMetadata(), canManageGroups(), createAgoraApp(), groupAccessStatus(), isGroupMember(), parseMemberProfileIds(), requireGroupAccess(), loadServerConfig() (+5 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.26
 Nodes (14): buildAuthHeaders(), buildJsonHeaders(), buildSocketAuth(), createGroup(), deleteGroup(), fetchGroupMessages(), fetchGroups(), fetchIdentity() (+6 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.23
-Nodes (3): HttpAgoraClient, safeErrorDetail(), redactSensitive()
+Cohesion: 0.32
+Nodes (8): AgoraTaskListener, blockedText(), buildHermesPrompt(), extractTaskId(), isActionableTaskForProfile(), isListenerResult(), readTargetProfileIds(), sanitizeAgentOutput()
 
 ### Community 4 - "Community 4"
-Cohesion: 0.35
-Nodes (6): AgoraTaskListener, blockedText(), buildHermesPrompt(), extractTaskId(), isActionableTaskForProfile(), sanitizeAgentOutput()
+Cohesion: 0.23
+Nodes (3): HttpAgoraClient, safeErrorDetail(), redactSensitive()
 
 ### Community 5 - "Community 5"
 Cohesion: 0.38
@@ -96,7 +96,7 @@ Cohesion: 0.4
 Nodes (0): 
 
 ### Community 11 - "Community 11"
-Cohesion: 0.67
+Cohesion: 0.4
 Nodes (0): 
 
 ### Community 12 - "Community 12"

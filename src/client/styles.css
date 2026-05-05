@@ -39,10 +39,12 @@ button, input, select { font: inherit; }
 .message-meta strong { color: #f8fafc; }
 .message p { margin: 0.55rem 0 0; white-space: pre-wrap; line-height: 1.55; }
 .empty { color: #94a3b8; text-align: center; padding-top: 12vh; }
-.composer { position: sticky; bottom: 0; z-index: 15; display: grid; grid-template-columns: minmax(130px, 170px) minmax(0, 1fr) auto; gap: 0.8rem; padding: 1rem 1.4rem calc(1rem + env(safe-area-inset-bottom)); border-top: 1px solid rgba(148, 163, 184, 0.18); background: rgba(8, 11, 18, 0.94); backdrop-filter: blur(16px); align-items: end; }
+.composer { position: sticky; bottom: 0; z-index: 15; display: grid; grid-template-columns: minmax(120px, 160px) minmax(140px, 190px) minmax(0, 1fr) auto; gap: 0.8rem; padding: 1rem 1.4rem calc(1rem + env(safe-area-inset-bottom)); border-top: 1px solid rgba(148, 163, 184, 0.18); background: rgba(8, 11, 18, 0.94); backdrop-filter: blur(16px); align-items: end; }
 .composer input, .composer select { width: 100%; border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 999px; padding: 0.9rem 1.2rem; background: rgba(15, 23, 42, 0.9); color: #fff; outline: none; }
-.action-select { display: grid; gap: 0.25rem; color: #94a3b8; font-size: 0.82rem; }
-.action-select select { color: #fff; font-weight: 800; }
+.action-select, .recipient-select { display: grid; gap: 0.25rem; color: #94a3b8; font-size: 0.82rem; }
+.action-select select, .recipient-select select { color: #fff; font-weight: 800; }
+.recipient-select select:disabled { opacity: 0.62; cursor: not-allowed; }
+.target-badge { border-radius: 999px; padding: 0.18rem 0.5rem; background: rgba(124, 58, 237, 0.24); color: #ddd6fe; border: 1px solid rgba(167, 139, 250, 0.32); }
 .monitor { overflow: hidden; }
 .profile-grid { padding: 1.4rem; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 1rem; }
 .profile-card { border: 1px solid rgba(148, 163, 184, 0.18); border-left: 4px solid #64748b; border-radius: 20px; padding: 1rem; background: rgba(15, 23, 42, 0.82); min-height: 210px; display: grid; gap: 0.65rem; }

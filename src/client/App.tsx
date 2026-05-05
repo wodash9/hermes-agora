@@ -3,7 +3,7 @@ import { io } from 'socket.io-client';
 import type { AgoraGroup, AgoraMessage, Identity, ProfileStatus } from '../shared/types';
 import { createClientAuthConfig, initKeycloak, isMockAllowed } from './auth';
 import { createGroup, deleteGroup, fetchGroupMessages, fetchGroups, fetchIdentity, fetchMessages, fetchProfileStatuses, postGroupMessage, postMessage, updateGroup, buildSocketAuth } from './api';
-import { ACTION_OPTIONS, applyComposerAction, toggleMemberSelection, type ComposerAction } from './uiState';
+import { ACTION_OPTIONS, DIRECTED_TARGET_ALL, applyComposerAction, buildRecipientOptions, buildTargetMetadata, toggleMemberSelection, type ComposerAction } from './uiState';
 import { scrollMessagesToLatest } from './scroll';
 import './styles.css';
 
@@ -22,6 +22,7 @@ export function App() {
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [composerAction, setComposerAction] = useState<ComposerAction>('NONE');
+  const [composerTargetProfileId, setComposerTargetProfileId] = useState(DIRECTED_TARGET_ALL);
   const [isGroupAdminOpen, setIsGroupAdminOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -99,7 +100,7 @@ export function App() {
     setDraft('');
     try {
       if (activeView === 'group' && activeGroupId) {
-        const message = await postGroupMessage(token, activeGroupId, text);
+        const message = await postGroupMessage(token, activeGroupId, text, buildTargetMetadata(composerTargetProfileId));
         setGroupMessages((current) => ({ ...current, [activeGroupId]: appendUnique(current[activeGroupId] ?? [], message) }));
       } else {
         const message = await postMessage(token, text);
@@ -140,6 +141,11 @@ export function App() {
 
   const activeGroup = groups.find((group) => group.id === activeGroupId) ?? null;
   const activeMessages = activeView === 'group' && activeGroupId ? groupMessages[activeGroupId] ?? [] : messages;
+  const recipientOptions = useMemo(() => buildRecipientOptions(activeGroup, profiles), [activeGroup, profiles]);
+
+  useEffect(() => {
+    if (!activeGroup || (composerTargetProfileId !== DIRECTED_TARGET_ALL && !activeGroup.memberProfileIds.includes(composerTargetProfileId))) setComposerTargetProfileId(DIRECTED_TARGET_ALL);
+  }, [activeGroup, composerTargetProfileId]);
 
   useLayoutEffect(() => {
     scrollMessagesToLatest(messagesRef.current);
@@ -180,7 +186,7 @@ export function App() {
           </header>
           <ol ref={messagesRef} className="messages">
             {activeMessages.map((message) => <li key={message.id} className={`message ${message.author.type}`}>
-              <div className="message-meta"><strong>{message.author.displayName}</strong><span>{message.author.type}</span><time>{new Date(message.createdAt).toLocaleString()}</time></div>
+              <div className="message-meta"><strong>{message.author.displayName}</strong><span>{message.author.type}</span>{formatMessageTargets(message, profiles) && <span className="target-badge">Para: {formatMessageTargets(message, profiles)}</span>}<time>{new Date(message.createdAt).toLocaleString()}</time></div>
               <p>{message.text}</p>
             </li>)}
             {activeMessages.length === 0 && <li className="empty">Todavía no hay mensajes aquí.</li>}
@@ -189,6 +195,11 @@ export function App() {
             <label className="action-select"><span>Acción</span>
               <select value={composerAction} onChange={(event) => setComposerAction(event.target.value as ComposerAction)} aria-label="Tipo de acción">
                 {ACTION_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </label>
+            <label className="recipient-select"><span>Para</span>
+              <select value={composerTargetProfileId} onChange={(event) => setComposerTargetProfileId(event.target.value)} aria-label="Destinatario" disabled={!activeGroup}>
+                {recipientOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
             </label>
             <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={composerPlaceholder(composerAction, activeGroup?.name)} />
@@ -312,6 +323,16 @@ function MonitorScreen({ profiles }: { profiles: ProfileStatus[] }) {
 
 function appendUnique(messages: AgoraMessage[], message: AgoraMessage) {
   return messages.some((item) => item.id === message.id) ? messages : [...messages, message];
+}
+
+function formatMessageTargets(message: AgoraMessage, profiles: ProfileStatus[]): string | null {
+  const targets = message.metadata?.targetProfileIds;
+  if (!Array.isArray(targets) || targets.length === 0) return null;
+  const profileNames = new Map(profiles.map((profile) => [profile.profileId, profile.displayName]));
+  return targets
+    .filter((target): target is string => typeof target === 'string')
+    .map((target) => profileNames.get(target) ?? target)
+    .join(', ');
 }
 
 function composerPlaceholder(action: ComposerAction, groupName?: string): string {
