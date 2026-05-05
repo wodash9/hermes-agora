@@ -2,7 +2,8 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { io } from 'socket.io-client';
 import type { AgoraGroup, AgoraMessage, Identity, ProfileStatus } from '../shared/types';
 import { createClientAuthConfig, initKeycloak, isMockAllowed } from './auth';
-import { createGroup, deleteGroup, fetchGroupMessages, fetchGroups, fetchIdentity, fetchMessages, fetchProfileStatuses, postGroupMessage, postMessage, updateGroup } from './api';
+import { createGroup, deleteGroup, fetchGroupMessages, fetchGroups, fetchIdentity, fetchMessages, fetchProfileStatuses, postGroupMessage, postMessage, updateGroup, buildSocketAuth } from './api';
+import { ACTION_OPTIONS, applyComposerAction, toggleMemberSelection, type ComposerAction } from './uiState';
 import './styles.css';
 
 type View = 'chat' | 'monitor' | 'group';
@@ -18,6 +19,8 @@ export function App() {
   const [activeView, setActiveView] = useState<View>('chat');
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
+  const [composerAction, setComposerAction] = useState<ComposerAction>('NONE');
+  const [isGroupAdminOpen, setIsGroupAdminOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -68,7 +71,7 @@ export function App() {
     const refreshStatuses = () => void fetchProfileStatuses(token).then((response) => active && setProfiles(response.profiles)).catch(() => undefined);
     const refreshGroups = () => void fetchGroups(token).then((response) => active && setGroups(response.groups)).catch(() => undefined);
     const interval = window.setInterval(() => { refreshStatuses(); refreshGroups(); }, 15_000);
-    const socket = io({ auth: { token } });
+    const socket = io({ auth: buildSocketAuth(token) });
     socket.on('message:new', (message: AgoraMessage) => {
       if (message.groupId) {
         setGroupMessages((current) => ({ ...current, [message.groupId!]: appendUnique(current[message.groupId!] ?? [], message) }));
@@ -87,8 +90,10 @@ export function App() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (!token || !draft.trim()) return;
-    const text = draft;
+    if (!token) return;
+    const text = applyComposerAction(composerAction, draft);
+    if (!text) return;
+    const previousDraft = draft;
     setDraft('');
     try {
       if (activeView === 'group' && activeGroupId) {
@@ -102,7 +107,7 @@ export function App() {
       setProfiles(statusResponse.profiles);
     } catch (err) {
       setError((err as Error).message);
-      setDraft(text);
+      setDraft(previousDraft);
     }
   }
 
@@ -149,6 +154,7 @@ export function App() {
           {groups.map((group) => <button key={group.id} className={`channel group-channel ${activeGroupId === group.id ? 'active' : ''}`} onClick={() => { setActiveView('group'); setActiveGroupId(group.id); }}>@ {group.name}</button>)}
           {groups.length === 0 && <p>No hay grupos todavía.</p>}
         </section>
+        <button className="mobile-admin-toggle" onClick={() => setIsGroupAdminOpen((current) => !current)}>{isGroupAdminOpen ? 'Cerrar gestión' : 'Gestionar grupos'}</button>
         <section className="identity">
           <small>Conectado como</small>
           <strong>{identity?.displayName ?? 'Operador'}</strong>
@@ -158,8 +164,13 @@ export function App() {
       {activeView === 'monitor' ? <MonitorScreen profiles={profiles} /> : (
         <section className="chat">
           <header className="chat-header">
-            <h1>{activeGroup ? `@ ${activeGroup.name}` : '# general'}</h1>
-            <p>{activeGroup ? `Grupo privado: ${activeGroup.memberProfileIds.join(', ')}` : 'Bus interno para perfiles Hermes. Protocolo: TASK / DONE / BLOCKED / QA.'}</p>
+            <div className="chat-title-row">
+              <div>
+                <h1>{activeGroup ? `@ ${activeGroup.name}` : '# general'}</h1>
+                <p>{activeGroup ? `Grupo privado: ${activeGroup.memberProfileIds.length} perfiles · ${activeGroup.memberProfileIds.join(', ')}` : 'Bus interno para perfiles Hermes. Protocolo: TASK / DONE / BLOCKED / QA.'}</p>
+              </div>
+              {activeGroup && <button className="secondary-action" onClick={() => setIsGroupAdminOpen(true)}>Gestionar miembros</button>}
+            </div>
           </header>
           <ol className="messages">
             {activeMessages.map((message) => <li key={message.id} className={`message ${message.author.type}`}>
@@ -169,22 +180,31 @@ export function App() {
             {activeMessages.length === 0 && <li className="empty">Todavía no hay mensajes aquí.</li>}
           </ol>
           <form className="composer" onSubmit={handleSubmit}>
-            <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={activeGroup ? `Mensaje para ${activeGroup.name}…` : 'Escribe un TASK, DONE, BLOCKED o QA…'} />
+            <label className="action-select"><span>Acción</span>
+              <select value={composerAction} onChange={(event) => setComposerAction(event.target.value as ComposerAction)} aria-label="Tipo de acción">
+                {ACTION_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </label>
+            <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={composerPlaceholder(composerAction, activeGroup?.name)} />
             <button>Enviar</button>
           </form>
         </section>
       )}
-      <GroupAdminPanel groups={groups} profiles={profiles} onSave={handleSaveGroup} onDelete={handleDeleteGroup} />
+      <GroupAdminPanel groups={groups} profiles={profiles} activeGroupId={activeGroupId} isOpen={isGroupAdminOpen} onOpenChange={setIsGroupAdminOpen} onSave={handleSaveGroup} onDelete={handleDeleteGroup} />
     </main>
   );
 }
 
-function GroupAdminPanel({ groups, profiles, onSave, onDelete }: { groups: AgoraGroup[]; profiles: ProfileStatus[]; onSave: (name: string, memberProfileIds: string[], groupId?: string) => Promise<void>; onDelete: (groupId: string) => Promise<void> }) {
+function GroupAdminPanel({ groups, profiles, activeGroupId, isOpen, onOpenChange, onSave, onDelete }: { groups: AgoraGroup[]; profiles: ProfileStatus[]; activeGroupId: string | null; isOpen: boolean; onOpenChange: (open: boolean) => void; onSave: (name: string, memberProfileIds: string[], groupId?: string) => Promise<void>; onDelete: (groupId: string) => Promise<void> }) {
   const [selectedGroupId, setSelectedGroupId] = useState('new');
   const selectedGroup = groups.find((group) => group.id === selectedGroupId);
   const [name, setName] = useState('');
   const [members, setMembers] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (activeGroupId && groups.some((group) => group.id === activeGroupId)) setSelectedGroupId(activeGroupId);
+  }, [activeGroupId, groups]);
 
   useEffect(() => {
     setName(selectedGroup?.name ?? '');
@@ -200,6 +220,8 @@ function GroupAdminPanel({ groups, profiles, onSave, onDelete }: { groups: Agora
         setSelectedGroupId('new');
         setName('');
         setMembers([]);
+      } else {
+        onOpenChange(false);
       }
     } finally {
       setBusy(false);
@@ -214,14 +236,20 @@ function GroupAdminPanel({ groups, profiles, onSave, onDelete }: { groups: Agora
       setSelectedGroupId('new');
       setName('');
       setMembers([]);
+      onOpenChange(false);
     } finally {
       setBusy(false);
     }
   }
 
-  return <aside className="group-admin">
-    <h2>Grupos</h2>
-    <p>Crea salas privadas y asigna perfiles Hermes.</p>
+  return <aside className={`group-admin ${isOpen ? 'open' : 'collapsed'}`}>
+    <div className="panel-heading">
+      <div>
+        <h2>{selectedGroup ? 'Editar grupo' : 'Crear grupo'}</h2>
+        <p>{selectedGroup ? 'Añade o quita perfiles de un grupo existente.' : 'Crea salas privadas y asigna perfiles Hermes.'}</p>
+      </div>
+      <button className="icon-button" type="button" onClick={() => onOpenChange(false)} aria-label="Cerrar gestión de grupos">×</button>
+    </div>
     <label>Editar
       <select value={selectedGroupId} onChange={(event) => setSelectedGroupId(event.target.value)}>
         <option value="new">Nuevo grupo</option>
@@ -235,7 +263,7 @@ function GroupAdminPanel({ groups, profiles, onSave, onDelete }: { groups: Agora
       <fieldset>
         <legend>Perfiles asignados</legend>
         {profiles.map((profile) => <label key={profile.profileId} className="checkbox-row">
-          <input type="checkbox" checked={members.includes(profile.profileId)} onChange={(event) => setMembers((current) => event.target.checked ? [...current, profile.profileId] : current.filter((id) => id !== profile.profileId))} />
+          <input type="checkbox" checked={members.includes(profile.profileId)} onChange={(event) => setMembers((current) => toggleMemberSelection(current, profile.profileId, event.target.checked))} />
           <span>{profile.displayName}</span><code>{profile.profileId}</code>
         </label>)}
       </fieldset>
@@ -278,6 +306,15 @@ function MonitorScreen({ profiles }: { profiles: ProfileStatus[] }) {
 
 function appendUnique(messages: AgoraMessage[], message: AgoraMessage) {
   return messages.some((item) => item.id === message.id) ? messages : [...messages, message];
+}
+
+function composerPlaceholder(action: ComposerAction, groupName?: string): string {
+  const target = groupName ? ` para ${groupName}` : '';
+  if (action === 'TASK') return `ID y tarea${target}: BTC-001 — revisar…`;
+  if (action === 'DONE') return `ID y resultado${target}: BTC-001 — completado…`;
+  if (action === 'BLOCKED') return `ID y bloqueo${target}: BTC-001 — falta contexto…`;
+  if (action === 'QA') return `Revisión QA${target}: criterios, hallazgos…`;
+  return groupName ? `Mensaje para ${groupName}…` : 'Escribe un mensaje o elige TASK / DONE / BLOCKED / QA…';
 }
 
 function formatDate(value: string | null) {

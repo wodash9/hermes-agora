@@ -97,6 +97,34 @@ describe('agent API', () => {
     expect(list.body.groups.map((group: { id: string }) => group.id)).toContain(create.body.id);
   });
 
+  it('lets admins add and remove profiles from an existing group', async () => {
+    const create = await request(app)
+      .post('/api/v1/groups')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'seldon-ceo')
+      .send({ name: 'Equipo Mutable', memberProfileIds: ['jeeves-ops', 'daneel-cto'] })
+      .expect(201);
+
+    const update = await request(app)
+      .patch(`/api/v1/groups/${create.body.id}`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'seldon-ceo')
+      .send({ name: 'Equipo Mutable', memberProfileIds: ['daneel-cto', 'columbo-qa'] })
+      .expect(200);
+
+    expect(update.body.memberProfileIds).toEqual(['daneel-cto', 'columbo-qa']);
+    await request(app)
+      .get(`/api/v1/groups/${create.body.id}/messages`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'jeeves-ops')
+      .expect(403);
+    await request(app)
+      .get(`/api/v1/groups/${create.body.id}/messages`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'columbo-qa')
+      .expect(200);
+  });
+
   it('rejects group creation by non-admin agents, unknown members and ids that cannot be used as group channels', async () => {
     await request(app)
       .post('/api/v1/groups')

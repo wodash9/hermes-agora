@@ -9,7 +9,7 @@
       "source_file": "vite.config.ts",
       "source_location": "L1",
       "id": "vite_config_ts",
-      "community": 12,
+      "community": 13,
       "norm_label": "vite.config.ts"
     },
     {
@@ -18,7 +18,7 @@
       "source_file": "dist-server/listener/redaction.js",
       "source_location": "L1",
       "id": "dist_server_listener_redaction_js",
-      "community": 2,
+      "community": 3,
       "norm_label": "redaction.js"
     },
     {
@@ -27,7 +27,7 @@
       "source_file": "src/listener/redaction.ts",
       "source_location": "L6",
       "id": "redaction_redactsensitive",
-      "community": 2,
+      "community": 3,
       "norm_label": "redactsensitive()"
     },
     {
@@ -108,7 +108,7 @@
       "source_file": "dist-server/listener/hermesRunner.js",
       "source_location": "L1",
       "id": "dist_server_listener_hermesrunner_js",
-      "community": 5,
+      "community": 6,
       "norm_label": "hermesrunner.js"
     },
     {
@@ -117,7 +117,7 @@
       "source_file": "src/listener/hermesRunner.ts",
       "source_location": "L10",
       "id": "hermesrunner_createhermesclirunner",
-      "community": 5,
+      "community": 6,
       "norm_label": "createhermesclirunner()"
     },
     {
@@ -126,7 +126,7 @@
       "source_file": "src/listener/hermesRunner.ts",
       "source_location": "L21",
       "id": "hermesrunner_runprocess",
-      "community": 5,
+      "community": 6,
       "norm_label": "runprocess()"
     },
     {
@@ -135,7 +135,7 @@
       "source_file": "src/listener/hermesRunner.ts",
       "source_location": "L63",
       "id": "hermesrunner_stripclinoise",
-      "community": 5,
+      "community": 6,
       "norm_label": "stripclinoise()"
     },
     {
@@ -144,7 +144,7 @@
       "source_file": "dist-server/listener/processor.js",
       "source_location": "L1",
       "id": "dist_server_listener_processor_js",
-      "community": 3,
+      "community": 4,
       "norm_label": "processor.js"
     },
     {
@@ -153,7 +153,7 @@
       "source_file": "src/listener/processor.ts",
       "source_location": "L47",
       "id": "processor_agoratasklistener",
-      "community": 3,
+      "community": 4,
       "norm_label": "agoratasklistener"
     },
     {
@@ -162,7 +162,7 @@
       "source_file": "src/listener/processor.ts",
       "source_location": "L53",
       "id": "processor_agoratasklistener_constructor",
-      "community": 3,
+      "community": 4,
       "norm_label": ".constructor()"
     },
     {
@@ -171,7 +171,7 @@
       "source_file": "src/listener/processor.ts",
       "source_location": "L62",
       "id": "processor_agoratasklistener_tick",
-      "community": 3,
+      "community": 4,
       "norm_label": ".tick()"
     },
     {
@@ -180,7 +180,7 @@
       "source_file": "src/listener/processor.ts",
       "source_location": "L118",
       "id": "processor_agoratasklistener_processtask",
-      "community": 3,
+      "community": 4,
       "norm_label": ".processtask()"
     },
     {
@@ -189,7 +189,7 @@
       "source_file": "src/listener/processor.ts",
       "source_location": "L145",
       "id": "processor_agoratasklistener_safestatus",
-      "community": 3,
+      "community": 4,
       "norm_label": ".safestatus()"
     },
     {
@@ -198,7 +198,7 @@
       "source_file": "src/listener/processor.ts",
       "source_location": "L154",
       "id": "processor_isactionabletaskforprofile",
-      "community": 3,
+      "community": 4,
       "norm_label": "isactionabletaskforprofile()"
     },
     {
@@ -207,7 +207,7 @@
       "source_file": "src/listener/processor.ts",
       "source_location": "L160",
       "id": "processor_extracttaskid",
-      "community": 3,
+      "community": 4,
       "norm_label": "extracttaskid()"
     },
     {
@@ -216,7 +216,7 @@
       "source_file": "src/listener/processor.ts",
       "source_location": "L164",
       "id": "processor_buildhermesprompt",
-      "community": 3,
+      "community": 4,
       "norm_label": "buildhermesprompt()"
     },
     {
@@ -225,7 +225,7 @@
       "source_file": "src/listener/processor.ts",
       "source_location": "L183",
       "id": "processor_sanitizeagentoutput",
-      "community": 3,
+      "community": 4,
       "norm_label": "sanitizeagentoutput()"
     },
     {
@@ -234,7 +234,7 @@
       "source_file": "src/listener/processor.ts",
       "source_location": "L189",
       "id": "processor_blockedtext",
-      "community": 3,
+      "community": 4,
       "norm_label": "blockedtext()"
     },
     {
@@ -243,7 +243,7 @@
       "source_file": "dist-server/listener/index.js",
       "source_location": "L1",
       "id": "dist_server_listener_index_js",
-      "community": 5,
+      "community": 6,
       "norm_label": "index.js"
     },
     {
@@ -252,7 +252,7 @@
       "source_file": "src/listener/index.ts",
       "source_location": "L22",
       "id": "index_main",
-      "community": 5,
+      "community": 6,
       "norm_label": "main()"
     },
     {
@@ -261,7 +261,7 @@
       "source_file": "src/listener/index.ts",
       "source_location": "L43",
       "id": "index_readlistenerconfig",
-      "community": 5,
+      "community": 6,
       "norm_label": "readlistenerconfig()"
     },
     {
@@ -270,7 +270,7 @@
       "source_file": "src/listener/index.ts",
       "source_location": "L69",
       "id": "index_readargs",
-      "community": 5,
+      "community": 6,
       "norm_label": "readargs()"
     },
     {
@@ -279,7 +279,7 @@
       "source_file": "src/listener/index.ts",
       "source_location": "L90",
       "id": "index_clampnumber",
-      "community": 5,
+      "community": 6,
       "norm_label": "clampnumber()"
     },
     {
@@ -288,7 +288,7 @@
       "source_file": "dist-server/listener/client.js",
       "source_location": "L1",
       "id": "dist_server_listener_client_js",
-      "community": 2,
+      "community": 3,
       "norm_label": "client.js"
     },
     {
@@ -297,7 +297,7 @@
       "source_file": "src/listener/client.ts",
       "source_location": "L11",
       "id": "client_httpagoraclient",
-      "community": 2,
+      "community": 3,
       "norm_label": "httpagoraclient"
     },
     {
@@ -306,7 +306,7 @@
       "source_file": "src/listener/client.ts",
       "source_location": "L15",
       "id": "client_httpagoraclient_constructor",
-      "community": 2,
+      "community": 3,
       "norm_label": ".constructor()"
     },
     {
@@ -315,7 +315,7 @@
       "source_file": "src/listener/client.ts",
       "source_location": "L21",
       "id": "client_httpagoraclient_listgroups",
-      "community": 2,
+      "community": 3,
       "norm_label": ".listgroups()"
     },
     {
@@ -324,7 +324,7 @@
       "source_file": "src/listener/client.ts",
       "source_location": "L26",
       "id": "client_httpagoraclient_listgroupmessages",
-      "community": 2,
+      "community": 3,
       "norm_label": ".listgroupmessages()"
     },
     {
@@ -333,7 +333,7 @@
       "source_file": "src/listener/client.ts",
       "source_location": "L33",
       "id": "client_httpagoraclient_postgroupmessage",
-      "community": 2,
+      "community": 3,
       "norm_label": ".postgroupmessage()"
     },
     {
@@ -342,7 +342,7 @@
       "source_file": "src/listener/client.ts",
       "source_location": "L44",
       "id": "client_httpagoraclient_updatestatus",
-      "community": 2,
+      "community": 3,
       "norm_label": ".updatestatus()"
     },
     {
@@ -351,7 +351,7 @@
       "source_file": "src/listener/client.ts",
       "source_location": "L51",
       "id": "client_httpagoraclient_request",
-      "community": 2,
+      "community": 3,
       "norm_label": ".request()"
     },
     {
@@ -360,7 +360,7 @@
       "source_file": "src/listener/client.ts",
       "source_location": "L79",
       "id": "client_safeerrordetail",
-      "community": 2,
+      "community": 3,
       "norm_label": "safeerrordetail()"
     },
     {
@@ -612,7 +612,7 @@
       "source_file": "dist-server/server/auth.js",
       "source_location": "L1",
       "id": "dist_server_server_auth_js",
-      "community": 4,
+      "community": 5,
       "norm_label": "auth.js"
     },
     {
@@ -621,7 +621,7 @@
       "source_file": "src/server/auth.ts",
       "source_location": "L13",
       "id": "auth_bearertoken",
-      "community": 4,
+      "community": 5,
       "norm_label": "bearertoken()"
     },
     {
@@ -630,7 +630,7 @@
       "source_file": "src/server/auth.ts",
       "source_location": "L19",
       "id": "auth_safeequals",
-      "community": 4,
+      "community": 5,
       "norm_label": "safeequals()"
     },
     {
@@ -639,7 +639,7 @@
       "source_file": "src/server/auth.ts",
       "source_location": "L26",
       "id": "auth_hasrequiredaudience",
-      "community": 4,
+      "community": 5,
       "norm_label": "hasrequiredaudience()"
     },
     {
@@ -648,7 +648,7 @@
       "source_file": "src/server/auth.ts",
       "source_location": "L32",
       "id": "auth_hasrole",
-      "community": 4,
+      "community": 5,
       "norm_label": "hasrole()"
     },
     {
@@ -657,7 +657,7 @@
       "source_file": "src/server/auth.ts",
       "source_location": "L39",
       "id": "auth_verifykeycloaktoken",
-      "community": 4,
+      "community": 5,
       "norm_label": "verifykeycloaktoken()"
     },
     {
@@ -666,7 +666,7 @@
       "source_file": "src/server/auth.ts",
       "source_location": "L55",
       "id": "auth_authenticateagenttoken",
-      "community": 4,
+      "community": 5,
       "norm_label": "authenticateagenttoken()"
     },
     {
@@ -675,7 +675,7 @@
       "source_file": "src/server/auth.ts",
       "source_location": "L64",
       "id": "auth_authenticatetoken",
-      "community": 4,
+      "community": 5,
       "norm_label": "authenticatetoken()"
     },
     {
@@ -684,7 +684,7 @@
       "source_file": "src/server/auth.ts",
       "source_location": "L71",
       "id": "auth_canaccesschannel",
-      "community": 4,
+      "community": 5,
       "norm_label": "canaccesschannel()"
     },
     {
@@ -693,7 +693,7 @@
       "source_file": "src/server/auth.ts",
       "source_location": "L75",
       "id": "auth_requireidentity",
-      "community": 4,
+      "community": 5,
       "norm_label": "requireidentity()"
     },
     {
@@ -702,7 +702,7 @@
       "source_file": "src/server/auth.ts",
       "source_location": "L87",
       "id": "auth_requirescope",
-      "community": 4,
+      "community": 5,
       "norm_label": "requirescope()"
     },
     {
@@ -801,7 +801,7 @@
       "source_file": "dist-server/server/index.js",
       "source_location": "L1",
       "id": "dist_server_server_index_js",
-      "community": 13,
+      "community": 14,
       "norm_label": "index.js"
     },
     {
@@ -810,7 +810,7 @@
       "source_file": "dist-server/shared/types.js",
       "source_location": "L1",
       "id": "dist_server_shared_types_js",
-      "community": 14,
+      "community": 15,
       "norm_label": "types.js"
     },
     {
@@ -819,7 +819,7 @@
       "source_file": "tests/store.test.ts",
       "source_location": "L1",
       "id": "tests_store_test_ts",
-      "community": 15,
+      "community": 16,
       "norm_label": "store.test.ts"
     },
     {
@@ -828,7 +828,7 @@
       "source_file": "tests/config.test.ts",
       "source_location": "L1",
       "id": "tests_config_test_ts",
-      "community": 16,
+      "community": 17,
       "norm_label": "config.test.ts"
     },
     {
@@ -918,7 +918,7 @@
       "source_file": "tests/api.test.ts",
       "source_location": "L1",
       "id": "tests_api_test_ts",
-      "community": 17,
+      "community": 18,
       "norm_label": "api.test.ts"
     },
     {
@@ -927,7 +927,7 @@
       "source_file": "tests/socket.test.ts",
       "source_location": "L1",
       "id": "tests_socket_test_ts",
-      "community": 11,
+      "community": 12,
       "norm_label": "socket.test.ts"
     },
     {
@@ -936,8 +936,17 @@
       "source_file": "tests/socket.test.ts",
       "source_location": "L37",
       "id": "socket_test_connect",
-      "community": 11,
+      "community": 12,
       "norm_label": "connect()"
+    },
+    {
+      "label": "client-ui.test.ts",
+      "file_type": "code",
+      "source_file": "tests/client-ui.test.ts",
+      "source_location": "L1",
+      "id": "tests_client_ui_test_ts",
+      "community": 19,
+      "norm_label": "client-ui.test.ts"
     },
     {
       "label": "client.ts",
@@ -945,7 +954,7 @@
       "source_file": "src/listener/client.ts",
       "source_location": "L1",
       "id": "src_listener_client_ts",
-      "community": 2,
+      "community": 3,
       "norm_label": "client.ts"
     },
     {
@@ -954,7 +963,7 @@
       "source_file": "src/listener/processor.ts",
       "source_location": "L1",
       "id": "src_listener_processor_ts",
-      "community": 3,
+      "community": 4,
       "norm_label": "processor.ts"
     },
     {
@@ -963,7 +972,7 @@
       "source_file": "src/listener/index.ts",
       "source_location": "L1",
       "id": "src_listener_index_ts",
-      "community": 5,
+      "community": 6,
       "norm_label": "index.ts"
     },
     {
@@ -972,7 +981,7 @@
       "source_file": "src/listener/hermesRunner.ts",
       "source_location": "L1",
       "id": "src_listener_hermesrunner_ts",
-      "community": 5,
+      "community": 6,
       "norm_label": "hermesrunner.ts"
     },
     {
@@ -990,7 +999,7 @@
       "source_file": "src/listener/redaction.ts",
       "source_location": "L1",
       "id": "src_listener_redaction_ts",
-      "community": 2,
+      "community": 3,
       "norm_label": "redaction.ts"
     },
     {
@@ -999,97 +1008,133 @@
       "source_file": "src/client/api.ts",
       "source_location": "L1",
       "id": "src_client_api_ts",
-      "community": 6,
+      "community": 2,
       "norm_label": "api.ts"
+    },
+    {
+      "label": "mockProfileForToken()",
+      "file_type": "code",
+      "source_file": "src/client/api.ts",
+      "source_location": "L6",
+      "id": "api_mockprofilefortoken",
+      "community": 2,
+      "norm_label": "mockprofilefortoken()"
+    },
+    {
+      "label": "buildAuthHeaders()",
+      "file_type": "code",
+      "source_file": "src/client/api.ts",
+      "source_location": "L10",
+      "id": "api_buildauthheaders",
+      "community": 2,
+      "norm_label": "buildauthheaders()"
+    },
+    {
+      "label": "buildSocketAuth()",
+      "file_type": "code",
+      "source_file": "src/client/api.ts",
+      "source_location": "L17",
+      "id": "api_buildsocketauth",
+      "community": 2,
+      "norm_label": "buildsocketauth()"
+    },
+    {
+      "label": "buildJsonHeaders()",
+      "file_type": "code",
+      "source_file": "src/client/api.ts",
+      "source_location": "L24",
+      "id": "api_buildjsonheaders",
+      "community": 2,
+      "norm_label": "buildjsonheaders()"
     },
     {
       "label": "fetchIdentity()",
       "file_type": "code",
       "source_file": "src/client/api.ts",
-      "source_location": "L3",
+      "source_location": "L28",
       "id": "api_fetchidentity",
-      "community": 6,
+      "community": 2,
       "norm_label": "fetchidentity()"
     },
     {
       "label": "fetchMessages()",
       "file_type": "code",
       "source_file": "src/client/api.ts",
-      "source_location": "L9",
+      "source_location": "L34",
       "id": "api_fetchmessages",
-      "community": 6,
+      "community": 2,
       "norm_label": "fetchmessages()"
     },
     {
       "label": "fetchGroups()",
       "file_type": "code",
       "source_file": "src/client/api.ts",
-      "source_location": "L15",
+      "source_location": "L40",
       "id": "api_fetchgroups",
-      "community": 6,
+      "community": 2,
       "norm_label": "fetchgroups()"
     },
     {
       "label": "createGroup()",
       "file_type": "code",
       "source_file": "src/client/api.ts",
-      "source_location": "L21",
+      "source_location": "L46",
       "id": "api_creategroup",
-      "community": 6,
+      "community": 2,
       "norm_label": "creategroup()"
     },
     {
       "label": "updateGroup()",
       "file_type": "code",
       "source_file": "src/client/api.ts",
-      "source_location": "L31",
+      "source_location": "L56",
       "id": "api_updategroup",
-      "community": 6,
+      "community": 2,
       "norm_label": "updategroup()"
     },
     {
       "label": "deleteGroup()",
       "file_type": "code",
       "source_file": "src/client/api.ts",
-      "source_location": "L41",
+      "source_location": "L66",
       "id": "api_deletegroup",
-      "community": 6,
+      "community": 2,
       "norm_label": "deletegroup()"
     },
     {
       "label": "fetchGroupMessages()",
       "file_type": "code",
       "source_file": "src/client/api.ts",
-      "source_location": "L49",
+      "source_location": "L74",
       "id": "api_fetchgroupmessages",
-      "community": 6,
+      "community": 2,
       "norm_label": "fetchgroupmessages()"
     },
     {
       "label": "fetchProfileStatuses()",
       "file_type": "code",
       "source_file": "src/client/api.ts",
-      "source_location": "L55",
+      "source_location": "L80",
       "id": "api_fetchprofilestatuses",
-      "community": 6,
+      "community": 2,
       "norm_label": "fetchprofilestatuses()"
     },
     {
       "label": "postMessage()",
       "file_type": "code",
       "source_file": "src/client/api.ts",
-      "source_location": "L61",
+      "source_location": "L86",
       "id": "api_postmessage",
-      "community": 6,
+      "community": 2,
       "norm_label": "postmessage()"
     },
     {
       "label": "postGroupMessage()",
       "file_type": "code",
       "source_file": "src/client/api.ts",
-      "source_location": "L71",
+      "source_location": "L96",
       "id": "api_postgroupmessage",
-      "community": 6,
+      "community": 2,
       "norm_label": "postgroupmessage()"
     },
     {
@@ -1138,6 +1183,33 @@
       "norm_label": "resetkeycloakforretry()"
     },
     {
+      "label": "uiState.ts",
+      "file_type": "code",
+      "source_file": "src/client/uiState.ts",
+      "source_location": "L1",
+      "id": "src_client_uistate_ts",
+      "community": 11,
+      "norm_label": "uistate.ts"
+    },
+    {
+      "label": "applyComposerAction()",
+      "file_type": "code",
+      "source_file": "src/client/uiState.ts",
+      "source_location": "L13",
+      "id": "uistate_applycomposeraction",
+      "community": 11,
+      "norm_label": "applycomposeraction()"
+    },
+    {
+      "label": "toggleMemberSelection()",
+      "file_type": "code",
+      "source_file": "src/client/uiState.ts",
+      "source_location": "L20",
+      "id": "uistate_togglememberselection",
+      "community": 11,
+      "norm_label": "togglememberselection()"
+    },
+    {
       "label": "App.tsx",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
@@ -1150,7 +1222,7 @@
       "label": "boot()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L26",
+      "source_location": "L29",
       "id": "app_boot",
       "community": 7,
       "norm_label": "boot()"
@@ -1159,7 +1231,7 @@
       "label": "load()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L53",
+      "source_location": "L56",
       "id": "app_load",
       "community": 7,
       "norm_label": "load()"
@@ -1168,7 +1240,7 @@
       "label": "refreshStatuses()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L68",
+      "source_location": "L71",
       "id": "app_refreshstatuses",
       "community": 7,
       "norm_label": "refreshstatuses()"
@@ -1177,7 +1249,7 @@
       "label": "refreshGroups()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L69",
+      "source_location": "L72",
       "id": "app_refreshgroups",
       "community": 7,
       "norm_label": "refreshgroups()"
@@ -1186,7 +1258,7 @@
       "label": "handleSubmit()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L88",
+      "source_location": "L91",
       "id": "app_handlesubmit",
       "community": 7,
       "norm_label": "handlesubmit()"
@@ -1195,7 +1267,7 @@
       "label": "handleSaveGroup()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L109",
+      "source_location": "L114",
       "id": "app_handlesavegroup",
       "community": 7,
       "norm_label": "handlesavegroup()"
@@ -1204,7 +1276,7 @@
       "label": "handleDeleteGroup()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L118",
+      "source_location": "L123",
       "id": "app_handledeletegroup",
       "community": 7,
       "norm_label": "handledeletegroup()"
@@ -1213,7 +1285,7 @@
       "label": "save()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L194",
+      "source_location": "L214",
       "id": "app_save",
       "community": 7,
       "norm_label": "save()"
@@ -1222,7 +1294,7 @@
       "label": "removeSelected()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L209",
+      "source_location": "L231",
       "id": "app_removeselected",
       "community": 7,
       "norm_label": "removeselected()"
@@ -1233,7 +1305,7 @@
       "source_file": "src/client/main.tsx",
       "source_location": "L1",
       "id": "src_client_main_tsx",
-      "community": 18,
+      "community": 20,
       "norm_label": "main.tsx"
     },
     {
@@ -1260,7 +1332,7 @@
       "source_file": "src/server/auth.ts",
       "source_location": "L1",
       "id": "src_server_auth_ts",
-      "community": 4,
+      "community": 5,
       "norm_label": "auth.ts"
     },
     {
@@ -1296,7 +1368,7 @@
       "source_file": "src/shared/types.ts",
       "source_location": "L1",
       "id": "src_shared_types_ts",
-      "community": 19,
+      "community": 21,
       "norm_label": "types.ts"
     }
   ],
@@ -3609,7 +3681,55 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/api.ts",
-      "source_location": "L3",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_src": "src_client_api_ts",
+      "_tgt": "api_mockprofilefortoken",
+      "source": "src_client_api_ts",
+      "target": "api_mockprofilefortoken",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/client/api.ts",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_src": "src_client_api_ts",
+      "_tgt": "api_buildauthheaders",
+      "source": "src_client_api_ts",
+      "target": "api_buildauthheaders",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/client/api.ts",
+      "source_location": "L17",
+      "weight": 1.0,
+      "_src": "src_client_api_ts",
+      "_tgt": "api_buildsocketauth",
+      "source": "src_client_api_ts",
+      "target": "api_buildsocketauth",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/client/api.ts",
+      "source_location": "L24",
+      "weight": 1.0,
+      "_src": "src_client_api_ts",
+      "_tgt": "api_buildjsonheaders",
+      "source": "src_client_api_ts",
+      "target": "api_buildjsonheaders",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/client/api.ts",
+      "source_location": "L28",
       "weight": 1.0,
       "_src": "src_client_api_ts",
       "_tgt": "api_fetchidentity",
@@ -3621,7 +3741,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/api.ts",
-      "source_location": "L9",
+      "source_location": "L34",
       "weight": 1.0,
       "_src": "src_client_api_ts",
       "_tgt": "api_fetchmessages",
@@ -3633,7 +3753,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/api.ts",
-      "source_location": "L15",
+      "source_location": "L40",
       "weight": 1.0,
       "_src": "src_client_api_ts",
       "_tgt": "api_fetchgroups",
@@ -3645,7 +3765,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/api.ts",
-      "source_location": "L21",
+      "source_location": "L46",
       "weight": 1.0,
       "_src": "src_client_api_ts",
       "_tgt": "api_creategroup",
@@ -3657,7 +3777,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/api.ts",
-      "source_location": "L31",
+      "source_location": "L56",
       "weight": 1.0,
       "_src": "src_client_api_ts",
       "_tgt": "api_updategroup",
@@ -3669,7 +3789,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/api.ts",
-      "source_location": "L41",
+      "source_location": "L66",
       "weight": 1.0,
       "_src": "src_client_api_ts",
       "_tgt": "api_deletegroup",
@@ -3681,7 +3801,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/api.ts",
-      "source_location": "L49",
+      "source_location": "L74",
       "weight": 1.0,
       "_src": "src_client_api_ts",
       "_tgt": "api_fetchgroupmessages",
@@ -3693,7 +3813,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/api.ts",
-      "source_location": "L55",
+      "source_location": "L80",
       "weight": 1.0,
       "_src": "src_client_api_ts",
       "_tgt": "api_fetchprofilestatuses",
@@ -3705,7 +3825,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/api.ts",
-      "source_location": "L61",
+      "source_location": "L86",
       "weight": 1.0,
       "_src": "src_client_api_ts",
       "_tgt": "api_postmessage",
@@ -3717,11 +3837,167 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/api.ts",
-      "source_location": "L71",
+      "source_location": "L96",
       "weight": 1.0,
       "_src": "src_client_api_ts",
       "_tgt": "api_postgroupmessage",
       "source": "src_client_api_ts",
+      "target": "api_postgroupmessage",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src/client/api.ts",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_src": "api_buildauthheaders",
+      "_tgt": "api_mockprofilefortoken",
+      "source": "api_mockprofilefortoken",
+      "target": "api_buildauthheaders",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src/client/api.ts",
+      "source_location": "L19",
+      "weight": 1.0,
+      "_src": "api_buildsocketauth",
+      "_tgt": "api_mockprofilefortoken",
+      "source": "api_mockprofilefortoken",
+      "target": "api_buildsocketauth",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src/client/api.ts",
+      "source_location": "L25",
+      "weight": 1.0,
+      "_src": "api_buildjsonheaders",
+      "_tgt": "api_buildauthheaders",
+      "source": "api_buildauthheaders",
+      "target": "api_buildjsonheaders",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src/client/api.ts",
+      "source_location": "L29",
+      "weight": 1.0,
+      "_src": "api_fetchidentity",
+      "_tgt": "api_buildauthheaders",
+      "source": "api_buildauthheaders",
+      "target": "api_fetchidentity",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src/client/api.ts",
+      "source_location": "L35",
+      "weight": 1.0,
+      "_src": "api_fetchmessages",
+      "_tgt": "api_buildauthheaders",
+      "source": "api_buildauthheaders",
+      "target": "api_fetchmessages",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src/client/api.ts",
+      "source_location": "L41",
+      "weight": 1.0,
+      "_src": "api_fetchgroups",
+      "_tgt": "api_buildauthheaders",
+      "source": "api_buildauthheaders",
+      "target": "api_fetchgroups",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src/client/api.ts",
+      "source_location": "L69",
+      "weight": 1.0,
+      "_src": "api_deletegroup",
+      "_tgt": "api_buildauthheaders",
+      "source": "api_buildauthheaders",
+      "target": "api_deletegroup",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src/client/api.ts",
+      "source_location": "L75",
+      "weight": 1.0,
+      "_src": "api_fetchgroupmessages",
+      "_tgt": "api_buildauthheaders",
+      "source": "api_buildauthheaders",
+      "target": "api_fetchgroupmessages",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src/client/api.ts",
+      "source_location": "L81",
+      "weight": 1.0,
+      "_src": "api_fetchprofilestatuses",
+      "_tgt": "api_buildauthheaders",
+      "source": "api_buildauthheaders",
+      "target": "api_fetchprofilestatuses",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src/client/api.ts",
+      "source_location": "L49",
+      "weight": 1.0,
+      "_src": "api_creategroup",
+      "_tgt": "api_buildjsonheaders",
+      "source": "api_buildjsonheaders",
+      "target": "api_creategroup",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src/client/api.ts",
+      "source_location": "L59",
+      "weight": 1.0,
+      "_src": "api_updategroup",
+      "_tgt": "api_buildjsonheaders",
+      "source": "api_buildjsonheaders",
+      "target": "api_updategroup",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src/client/api.ts",
+      "source_location": "L89",
+      "weight": 1.0,
+      "_src": "api_postmessage",
+      "_tgt": "api_buildjsonheaders",
+      "source": "api_buildjsonheaders",
+      "target": "api_postmessage",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src/client/api.ts",
+      "source_location": "L99",
+      "weight": 1.0,
+      "_src": "api_postgroupmessage",
+      "_tgt": "api_buildjsonheaders",
+      "source": "api_buildjsonheaders",
       "target": "api_postgroupmessage",
       "confidence_score": 1.0
     },
@@ -3776,8 +4052,32 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "src/client/uiState.ts",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_src": "src_client_uistate_ts",
+      "_tgt": "uistate_applycomposeraction",
+      "source": "src_client_uistate_ts",
+      "target": "uistate_applycomposeraction",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/client/uiState.ts",
+      "source_location": "L20",
+      "weight": 1.0,
+      "_src": "src_client_uistate_ts",
+      "_tgt": "uistate_togglememberselection",
+      "source": "src_client_uistate_ts",
+      "target": "uistate_togglememberselection",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L26",
+      "source_location": "L29",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_boot",
@@ -3789,7 +4089,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L53",
+      "source_location": "L56",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_load",
@@ -3801,7 +4101,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L68",
+      "source_location": "L71",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_refreshstatuses",
@@ -3813,7 +4113,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L69",
+      "source_location": "L72",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_refreshgroups",
@@ -3825,7 +4125,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L88",
+      "source_location": "L91",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_handlesubmit",
@@ -3837,7 +4137,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L109",
+      "source_location": "L114",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_handlesavegroup",
@@ -3849,7 +4149,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L118",
+      "source_location": "L123",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_handledeletegroup",
@@ -3861,7 +4161,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L194",
+      "source_location": "L214",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_save",
@@ -3873,7 +4173,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L209",
+      "source_location": "L231",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_removeselected",
