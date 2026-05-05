@@ -191,10 +191,12 @@ function isListenerResult(message: AgoraMessage): boolean {
 }
 
 export function buildHermesPrompt(profileId: string, group: AgoraGroup, message: AgoraMessage, taskId: string): string {
+  const groupMembers = [...group.memberProfileIds].sort().join(', ');
   return [
     `TASK ${taskId} recibido en Hermes Agora.`,
     `Perfil receptor: ${profileId}.`,
     `Grupo: ${group.name} (${group.id}).`,
+    `Miembros del grupo: ${groupMembers}.`,
     `Autor: ${message.author.displayName} (${message.author.profileId}).`,
     '',
     'Mensaje original:',
@@ -205,7 +207,14 @@ export function buildHermesPrompt(profileId: string, group: AgoraGroup, message:
     '- Usa protocolo DONE / BLOCKED / QA.',
     '- Si no puedes completar la tarea con seguridad, responde BLOCKED con motivo breve.',
     '- No reveles secretos ni tokens.',
-    '- Devuelve una respuesta final breve para publicar en el grupo.'
+    '- Devuelve una respuesta final breve para publicar en el grupo.',
+    '',
+    'Capacidad de coordinación por Agora:',
+    '- Si la tarea pide explícitamente coordinar, delegar o pedir respuesta a otros perfiles, puedes publicar nuevos TASK en este mismo grupo de Agora.',
+    '- Usa solo las variables de entorno HERMES_AGORA_URL y HUB_AGENT_TOKEN; nunca imprimas ni pegues el token.',
+    `- Endpoint: POST $HERMES_AGORA_URL/api/v1/groups/${group.id}/messages con headers Authorization: Bearer $HUB_AGENT_TOKEN, X-Hermes-Profile: ${profileId}, Content-Type: application/json.`,
+    '- Para dirigir una tarea a perfiles concretos, envía JSON con metadata.targetProfileIds, por ejemplo: {"text":"TASK <id> — ...","metadata":{"targetProfileIds":["daneel-cto"]}}.',
+    '- Evita bucles: no conviertas respuestas DONE/BLOCKED/QA en nuevos TASK salvo que el humano lo pida explícitamente.'
   ].join('\n');
 }
 

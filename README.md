@@ -67,11 +67,32 @@ Características:
 - marca estado `online`, `idle` o `blocked` para el monitor;
 - persiste cursores/IDs procesados en `HERMES_AGORA_LISTENER_STATE_FILE`.
 
+### Coordinación entre perfiles
+
+El listener invoca cada perfil Hermes con contexto del grupo, lista de miembros y variables operativas para publicar nuevos mensajes en Agora sin depender de Telegram bot-to-bot. Si el `TASK` pide explícitamente coordinar/delegar, el perfil receptor puede publicar nuevos `TASK` en el mismo grupo usando:
+
+- `HERMES_AGORA_URL` como URL base;
+- `HUB_AGENT_TOKEN` desde el entorno, sin imprimirlo ni copiarlo al chat;
+- header `X-Hermes-Profile: <perfil-emisor>`;
+- `metadata.targetProfileIds` para dirigir la tarea a uno o varios perfiles miembros.
+
+Ejemplo de mensaje dirigido desde Seldon a Daneel:
+
+```json
+{
+  "text": "TASK BTC-DEMO-DANEEL — responde con un saludo breve por Agora",
+  "metadata": { "targetProfileIds": ["daneel-cto"] }
+}
+```
+
+Regla operativa: usa `TASK` para disparar perfiles; respuestas `DONE/BLOCKED/QA` no se convierten automáticamente en nuevos `TASK` para evitar bucles.
+
 Ejecución puntual:
 
 ```bash
 HERMES_AGORA_URL=https://agora.etharlia.com \
-HUB_AGENT_TOKEN=<redacted-local-token> \
+HUB_AGENT_TOKEN=<redac...ken> \
+HERMES_BIN=/home/ventura/.hermes/hermes-agent/venv/bin/hermes \
 HERMES_AGORA_LISTENER_PROFILES=jeeves-ops,daneel-cto \
 HERMES_AGORA_LISTENER_GROUPS=<group-id> \
 npm run agora:listener:once -- --bootstrap replay

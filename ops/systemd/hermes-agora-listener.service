@@ -11,6 +11,8 @@ Environment=HERMES_AGORA_URL=https://agora.etharlia.com
 Environment=HERMES_AGORA_LISTENER_BOOTSTRAP=latest
 Environment=HERMES_AGORA_LISTENER_INTERVAL_MS=30000
 Environment=HERMES_AGORA_LISTENER_STATE_FILE=/home/ventura/.hermes/agora-listener-state.json
+Environment=HERMES_BIN=/home/ventura/.hermes/hermes-agent/venv/bin/hermes
+Environment=PATH=/home/ventura/.hermes/hermes-agent/venv/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=/usr/bin/env node /home/ventura/Documents/hermes-agora/dist-server/listener/index.js
 Restart=always
 RestartSec=15

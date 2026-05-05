@@ -86,6 +86,11 @@ describe('AgoraTaskListener', () => {
     expect(runnerCalls).toHaveLength(1);
     expect(runnerCalls[0].profileId).toBe('jeeves-ops');
     expect(runnerCalls[0].prompt).toContain('TASK BTC-1');
+    expect(runnerCalls[0].prompt).toContain('Miembros del grupo: jeeves-ops.');
+    expect(runnerCalls[0].prompt).toContain('Capacidad de coordinación por Agora:');
+    expect(runnerCalls[0].prompt).toContain('POST $HERMES_AGORA_URL/api/v1/groups/ops/messages');
+    expect(runnerCalls[0].prompt).toContain('metadata.targetProfileIds');
+    expect(runnerCalls[0].prompt).not.toContain('HUB_AGENT_TOKEN=');
     expect(client.posted).toEqual([{ profileId: 'jeeves-ops', groupId: 'ops', text: 'DONE BTC-1 — despliegue revisado', replyTo: 'msg_1' }]);
     expect(client.statuses.map((item) => item.status)).toEqual(['online', 'idle']);
   });
