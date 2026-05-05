@@ -47,7 +47,7 @@ export function readListenerConfig(args: string[], env: NodeJS.ProcessEnv): List
   const rawGroups = arg.group ?? env.HERMES_AGORA_LISTENER_GROUPS ?? env.HERMES_AGORA_LISTENER_GROUP;
   const profiles = rawProfiles
     ? rawProfiles.split(',').map((profile) => profile.trim()).filter(Boolean)
-    : Object.keys(serverConfig.agentProfiles).filter((profileId) => !serverConfig.agentProfiles[profileId].scopes.includes('admin'));
+    : Object.keys(serverConfig.agentProfiles);
 
   const bootstrapModeRaw = (arg.bootstrap ?? env.HERMES_AGORA_LISTENER_BOOTSTRAP ?? 'latest').toLowerCase();
   if (bootstrapModeRaw !== 'latest' && bootstrapModeRaw !== 'replay') throw new Error('HERMES_AGORA_LISTENER_BOOTSTRAP must be latest or replay');

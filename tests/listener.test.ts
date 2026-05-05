@@ -268,6 +268,19 @@ describe('AgoraTaskListener', () => {
     expect(config.hermesTimeoutMs).toBe(5000);
   });
 
+  it('listens with every configured BTC profile by default, including Seldon', () => {
+    const config = readListenerConfig([], {
+      HUB_AGENT_TOKEN: 'env-secret-token-123456',
+      HERMES_AGORA_URL: 'https://agora.etharlia.com'
+    });
+
+    expect(config.profiles).toContain('seldon-ceo');
+    expect(config.profiles).toContain('jeeves-ops');
+    expect(config.profiles).toContain('columbo-qa');
+    expect(config.profiles).toContain('iris-packaging-design');
+    expect(config.profiles).toHaveLength(13);
+  });
+
   it('can restrict processing to explicitly selected groups for safe replay smokes', async () => {
     dir = mkdtempSync(join(tmpdir(), 'agora-listener-'));
     const createdBy = { type: 'agent' as const, profileId: 'seldon-ceo', displayName: 'Seldon' };
