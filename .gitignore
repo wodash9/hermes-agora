@@ -1,0 +1,12 @@
+node_modules
+dist
+dist-server
+coverage
+.env
+.env.*
+!.env.example
+/data
+*.sqlite
+*.db
+.DS_Store
+graphify-out/cache

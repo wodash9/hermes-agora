@@ -1,0 +1,14 @@
+import { describe, expect, it } from 'vitest';
+import { loadServerConfig } from '../src/server/config';
+
+describe('server config', () => {
+  it('rejects production without a real agent token', () => {
+    expect(() => loadServerConfig({ NODE_ENV: 'production', HUB_AGENT_TOKEN: 'change-me-dev-token' })).toThrow(/HUB_AGENT_TOKEN/);
+  });
+
+  it('loads default BTC agent profiles', () => {
+    const config = loadServerConfig({ HUB_AGENT_TOKEN: 'dev-secret' });
+    expect(config.agentProfiles['seldon-ceo'].displayName).toBe('Seldon');
+    expect(config.agentProfiles['columbo-qa'].scopes).toContain('messages:write');
+  });
+});

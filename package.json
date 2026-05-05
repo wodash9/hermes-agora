@@ -1,0 +1,43 @@
+{
+  "name": "hermes-agora",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Internal Keycloak-secured chat hub for Hermes profiles and human operators.",
+  "scripts": {
+    "dev": "tsx watch src/server/index.ts",
+    "dev:web": "vite --host 0.0.0.0",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit",
+    "build": "npm run typecheck && vitest run && vite build && tsc -p tsconfig.server.json",
+    "start": "node dist-server/server/index.js"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "cors": "latest",
+    "dotenv": "latest",
+    "express": "latest",
+    "jose": "latest",
+    "keycloak-js": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "socket.io": "latest",
+    "socket.io-client": "latest"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "latest",
+    "@testing-library/react": "latest",
+    "@types/cors": "latest",
+    "@types/express": "latest",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@types/supertest": "latest",
+    "jsdom": "latest",
+    "supertest": "latest",
+    "tsx": "latest",
+    "typescript": "latest",
+    "vite": "latest",
+    "vitest": "latest"
+  }
+}
