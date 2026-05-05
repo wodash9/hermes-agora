@@ -1,15 +1,17 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import type { AgoraGroup, AgoraMessage, Identity, ProfileStatus } from '../shared/types';
 import { createClientAuthConfig, initKeycloak, isMockAllowed } from './auth';
 import { createGroup, deleteGroup, fetchGroupMessages, fetchGroups, fetchIdentity, fetchMessages, fetchProfileStatuses, postGroupMessage, postMessage, updateGroup, buildSocketAuth } from './api';
 import { ACTION_OPTIONS, applyComposerAction, toggleMemberSelection, type ComposerAction } from './uiState';
+import { scrollMessagesToLatest } from './scroll';
 import './styles.css';
 
 type View = 'chat' | 'monitor' | 'group';
 
 export function App() {
   const authConfig = useMemo(() => createClientAuthConfig(import.meta.env), []);
+  const messagesRef = useRef<HTMLOListElement | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [messages, setMessages] = useState<AgoraMessage[]>([]);
@@ -139,6 +141,10 @@ export function App() {
   const activeGroup = groups.find((group) => group.id === activeGroupId) ?? null;
   const activeMessages = activeView === 'group' && activeGroupId ? groupMessages[activeGroupId] ?? [] : messages;
 
+  useLayoutEffect(() => {
+    scrollMessagesToLatest(messagesRef.current);
+  }, [activeMessages.length, activeGroupId, activeView]);
+
   if (isLoading) return <main className="center-card"><h1>Hermes Agora</h1><p>Inicializando hub interno…</p></main>;
   if (error) return <main className="center-card error"><h1>Hermes Agora</h1><p>{error}</p></main>;
   if (!token) return <LoginScreen onLogin={() => void initKeycloak(authConfig).then((kc) => kc?.login())} />;
@@ -172,7 +178,7 @@ export function App() {
               {activeGroup && <button className="secondary-action" onClick={() => setIsGroupAdminOpen(true)}>Gestionar miembros</button>}
             </div>
           </header>
-          <ol className="messages">
+          <ol ref={messagesRef} className="messages">
             {activeMessages.map((message) => <li key={message.id} className={`message ${message.author.type}`}>
               <div className="message-meta"><strong>{message.author.displayName}</strong><span>{message.author.type}</span><time>{new Date(message.createdAt).toLocaleString()}</time></div>
               <p>{message.text}</p>

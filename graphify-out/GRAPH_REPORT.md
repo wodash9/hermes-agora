@@ -1,11 +1,11 @@
 # Graph Report - .  (2026-05-05)
 
 ## Corpus Check
-- 38 files · ~16,470 words
+- 39 files · ~16,621 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 152 nodes · 246 edges · 22 communities detected
+- 154 nodes · 247 edges · 23 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -32,6 +32,7 @@
 - [[_COMMUNITY_Community 19|Community 19]]
 - [[_COMMUNITY_Community 20|Community 20]]
 - [[_COMMUNITY_Community 21|Community 21]]
+- [[_COMMUNITY_Community 22|Community 22]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `JsonMessageStore` - 15 edges
@@ -80,7 +81,7 @@ Nodes (7): createHermesCliRunner(), runProcess(), stripCliNoise(), clampNumber()
 
 ### Community 7 - "Community 7"
 Cohesion: 0.2
-Nodes (0):
+Nodes (0): 
 
 ### Community 8 - "Community 8"
 Cohesion: 0.36
@@ -92,72 +93,78 @@ Nodes (1): FakeAgoraClient
 
 ### Community 10 - "Community 10"
 Cohesion: 0.4
-Nodes (0):
+Nodes (0): 
 
 ### Community 11 - "Community 11"
 Cohesion: 0.67
-Nodes (0):
+Nodes (0): 
 
 ### Community 12 - "Community 12"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 13 - "Community 13"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 14 - "Community 14"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 15 - "Community 15"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 16 - "Community 16"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 17 - "Community 17"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 18 - "Community 18"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 19 - "Community 19"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 20 - "Community 20"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 21 - "Community 21"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
+
+### Community 22 - "Community 22"
+Cohesion: 1.0
+Nodes (0): 
 
 ## Knowledge Gaps
 - **Thin community `Community 12`** (2 nodes): `connect()`, `socket.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 13`** (1 nodes): `vite.config.ts`
+- **Thin community `Community 13`** (2 nodes): `scrollMessagesToLatest()`, `scroll.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 14`** (1 nodes): `index.js`
+- **Thin community `Community 14`** (1 nodes): `vite.config.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 15`** (1 nodes): `types.js`
+- **Thin community `Community 15`** (1 nodes): `index.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 16`** (1 nodes): `store.test.ts`
+- **Thin community `Community 16`** (1 nodes): `types.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 17`** (1 nodes): `config.test.ts`
+- **Thin community `Community 17`** (1 nodes): `store.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 18`** (1 nodes): `api.test.ts`
+- **Thin community `Community 18`** (1 nodes): `config.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 19`** (1 nodes): `client-ui.test.ts`
+- **Thin community `Community 19`** (1 nodes): `api.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 20`** (1 nodes): `main.tsx`
+- **Thin community `Community 20`** (1 nodes): `client-ui.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 21`** (1 nodes): `types.ts`
+- **Thin community `Community 21`** (1 nodes): `main.tsx`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 22`** (1 nodes): `types.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions

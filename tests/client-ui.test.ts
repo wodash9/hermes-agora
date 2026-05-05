@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ACTION_OPTIONS, applyComposerAction, toggleMemberSelection } from '../src/client/uiState';
 import { buildAuthHeaders, buildSocketAuth } from '../src/client/api';
+import { scrollMessagesToLatest } from '../src/client/scroll';
 
 describe('client UI helpers', () => {
   it('offers explicit Agora action protocol options for the composer', () => {
@@ -27,6 +28,20 @@ describe('client UI helpers', () => {
     expect(buildSocketAuth('change-me-dev-token')).toEqual({ token: 'change-me-dev-token', profileId: 'seldon-ceo' });
     expect(buildAuthHeaders('real-keycloak-token')).toEqual({ Authorization: 'Bearer real-keycloak-token' });
     expect(buildSocketAuth('real-keycloak-token')).toEqual({ token: 'real-keycloak-token' });
+  });
+
+  it('scrolls the chat viewport to the latest message after message changes', () => {
+    const calls: unknown[] = [];
+    const messagesViewport = {
+      scrollHeight: 1842,
+      scrollTop: 0,
+      scrollTo(options: unknown) { calls.push(options); }
+    };
+
+    scrollMessagesToLatest(messagesViewport);
+
+    expect(messagesViewport.scrollTop).toBe(1842);
+    expect(calls).toEqual([{ top: 1842, behavior: 'auto' }]);
   });
 });
 
@@ -53,6 +68,15 @@ describe('mobile-responsive Agora layout CSS', () => {
     expect(css).toContain('.messages { min-height: 0;');
     expect(css).toContain('.composer { position: sticky; bottom: 0;');
     expect(css).toContain('.shell { height: 100dvh; max-height: 100dvh;');
+  });
+
+  it('wires the messages list to auto-scroll when the active chat receives or loads messages', () => {
+    const appSource = readFileSync(join(process.cwd(), 'src/client/App.tsx'), 'utf8');
+    expect(appSource).toContain('const messagesRef = useRef<HTMLOListElement | null>(null);');
+    expect(appSource).toContain('useLayoutEffect(() => {');
+    expect(appSource).toContain('scrollMessagesToLatest(messagesRef.current);');
+    expect(appSource).toContain('}, [activeMessages.length, activeGroupId, activeView]);');
+    expect(appSource).toContain('<ol ref={messagesRef} className="messages">');
   });
 
   it('keeps the group admin panel out of document flow on tablet and mobile widths', () => {

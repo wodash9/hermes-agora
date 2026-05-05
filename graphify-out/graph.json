@@ -9,7 +9,7 @@
       "source_file": "vite.config.ts",
       "source_location": "L1",
       "id": "vite_config_ts",
-      "community": 13,
+      "community": 14,
       "norm_label": "vite.config.ts"
     },
     {
@@ -801,7 +801,7 @@
       "source_file": "dist-server/server/index.js",
       "source_location": "L1",
       "id": "dist_server_server_index_js",
-      "community": 14,
+      "community": 15,
       "norm_label": "index.js"
     },
     {
@@ -810,7 +810,7 @@
       "source_file": "dist-server/shared/types.js",
       "source_location": "L1",
       "id": "dist_server_shared_types_js",
-      "community": 15,
+      "community": 16,
       "norm_label": "types.js"
     },
     {
@@ -819,7 +819,7 @@
       "source_file": "tests/store.test.ts",
       "source_location": "L1",
       "id": "tests_store_test_ts",
-      "community": 16,
+      "community": 17,
       "norm_label": "store.test.ts"
     },
     {
@@ -828,7 +828,7 @@
       "source_file": "tests/config.test.ts",
       "source_location": "L1",
       "id": "tests_config_test_ts",
-      "community": 17,
+      "community": 18,
       "norm_label": "config.test.ts"
     },
     {
@@ -918,7 +918,7 @@
       "source_file": "tests/api.test.ts",
       "source_location": "L1",
       "id": "tests_api_test_ts",
-      "community": 18,
+      "community": 19,
       "norm_label": "api.test.ts"
     },
     {
@@ -945,7 +945,7 @@
       "source_file": "tests/client-ui.test.ts",
       "source_location": "L1",
       "id": "tests_client_ui_test_ts",
-      "community": 19,
+      "community": 20,
       "norm_label": "client-ui.test.ts"
     },
     {
@@ -1222,7 +1222,7 @@
       "label": "boot()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L29",
+      "source_location": "L31",
       "id": "app_boot",
       "community": 7,
       "norm_label": "boot()"
@@ -1231,7 +1231,7 @@
       "label": "load()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L56",
+      "source_location": "L58",
       "id": "app_load",
       "community": 7,
       "norm_label": "load()"
@@ -1240,7 +1240,7 @@
       "label": "refreshStatuses()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L71",
+      "source_location": "L73",
       "id": "app_refreshstatuses",
       "community": 7,
       "norm_label": "refreshstatuses()"
@@ -1249,7 +1249,7 @@
       "label": "refreshGroups()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L72",
+      "source_location": "L74",
       "id": "app_refreshgroups",
       "community": 7,
       "norm_label": "refreshgroups()"
@@ -1258,7 +1258,7 @@
       "label": "handleSubmit()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L91",
+      "source_location": "L93",
       "id": "app_handlesubmit",
       "community": 7,
       "norm_label": "handlesubmit()"
@@ -1267,7 +1267,7 @@
       "label": "handleSaveGroup()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L114",
+      "source_location": "L116",
       "id": "app_handlesavegroup",
       "community": 7,
       "norm_label": "handlesavegroup()"
@@ -1276,7 +1276,7 @@
       "label": "handleDeleteGroup()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L123",
+      "source_location": "L125",
       "id": "app_handledeletegroup",
       "community": 7,
       "norm_label": "handledeletegroup()"
@@ -1285,7 +1285,7 @@
       "label": "save()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L214",
+      "source_location": "L220",
       "id": "app_save",
       "community": 7,
       "norm_label": "save()"
@@ -1294,7 +1294,7 @@
       "label": "removeSelected()",
       "file_type": "code",
       "source_file": "src/client/App.tsx",
-      "source_location": "L231",
+      "source_location": "L237",
       "id": "app_removeselected",
       "community": 7,
       "norm_label": "removeselected()"
@@ -1305,8 +1305,26 @@
       "source_file": "src/client/main.tsx",
       "source_location": "L1",
       "id": "src_client_main_tsx",
-      "community": 20,
+      "community": 21,
       "norm_label": "main.tsx"
+    },
+    {
+      "label": "scroll.ts",
+      "file_type": "code",
+      "source_file": "src/client/scroll.ts",
+      "source_location": "L1",
+      "id": "src_client_scroll_ts",
+      "community": 13,
+      "norm_label": "scroll.ts"
+    },
+    {
+      "label": "scrollMessagesToLatest()",
+      "file_type": "code",
+      "source_file": "src/client/scroll.ts",
+      "source_location": "L7",
+      "id": "scroll_scrollmessagestolatest",
+      "community": 13,
+      "norm_label": "scrollmessagestolatest()"
     },
     {
       "label": "socket.ts",
@@ -1368,7 +1386,7 @@
       "source_file": "src/shared/types.ts",
       "source_location": "L1",
       "id": "src_shared_types_ts",
-      "community": 21,
+      "community": 22,
       "norm_label": "types.ts"
     }
   ],
@@ -4077,7 +4095,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L29",
+      "source_location": "L31",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_boot",
@@ -4089,7 +4107,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L56",
+      "source_location": "L58",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_load",
@@ -4101,7 +4119,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L71",
+      "source_location": "L73",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_refreshstatuses",
@@ -4113,7 +4131,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L72",
+      "source_location": "L74",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_refreshgroups",
@@ -4125,7 +4143,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L91",
+      "source_location": "L93",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_handlesubmit",
@@ -4137,7 +4155,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L114",
+      "source_location": "L116",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_handlesavegroup",
@@ -4149,7 +4167,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L123",
+      "source_location": "L125",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_handledeletegroup",
@@ -4161,7 +4179,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L214",
+      "source_location": "L220",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_save",
@@ -4173,12 +4191,24 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/client/App.tsx",
-      "source_location": "L231",
+      "source_location": "L237",
       "weight": 1.0,
       "_src": "src_client_app_tsx",
       "_tgt": "app_removeselected",
       "source": "src_client_app_tsx",
       "target": "app_removeselected",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/client/scroll.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_src": "src_client_scroll_ts",
+      "_tgt": "scroll_scrollmessagestolatest",
+      "source": "src_client_scroll_ts",
+      "target": "scroll_scrollmessagestolatest",
       "confidence_score": 1.0
     },
     {
