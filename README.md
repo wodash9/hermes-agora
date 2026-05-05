@@ -73,6 +73,7 @@ Ejecución puntual:
 HERMES_AGORA_URL=https://agora.etharlia.com \
 HUB_AGENT_TOKEN=<redacted-local-token> \
 HERMES_AGORA_LISTENER_PROFILES=jeeves-ops,daneel-cto \
+HERMES_AGORA_LISTENER_GROUPS=<group-id> \
 npm run agora:listener:once -- --bootstrap replay
 ```
 

@@ -267,4 +267,28 @@ describe('AgoraTaskListener', () => {
     expect(config.intervalMs).toBe(30000);
     expect(config.hermesTimeoutMs).toBe(5000);
   });
+
+  it('can restrict processing to explicitly selected groups for safe replay smokes', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'agora-listener-'));
+    const createdBy = { type: 'agent' as const, profileId: 'seldon-ceo', displayName: 'Seldon' };
+    const target: AgoraGroup = { id: 'target', name: 'Target', memberProfileIds: ['jeeves-ops'], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), createdBy };
+    const old: AgoraGroup = { id: 'old', name: 'Old', memberProfileIds: ['jeeves-ops'], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), createdBy };
+    const client = new FakeAgoraClient({ 'jeeves-ops': [target, old] }, {
+      target: [message({ id: 'target_msg', text: 'TASK TARGET — procesar', groupId: 'target' })],
+      old: [message({ id: 'old_msg', text: 'TASK OLD — no tocar', groupId: 'old' })]
+    });
+    const listener = new AgoraTaskListener({
+      client,
+      stateStore: new FileListenerStateStore(join(dir, 'state.json')),
+      runner: async ({ taskMessage }) => ({ ok: true, output: `DONE ${taskMessage.id}` }),
+      profiles: ['jeeves-ops'],
+      groups: ['target'],
+      bootstrapMode: 'replay'
+    });
+
+    const result = await listener.tick();
+
+    expect(result.processed).toBe(1);
+    expect(client.posted).toEqual([{ profileId: 'jeeves-ops', groupId: 'target', text: 'DONE target_msg', replyTo: 'target_msg' }]);
+  });
 });

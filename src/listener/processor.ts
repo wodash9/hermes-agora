@@ -30,6 +30,7 @@ export interface AgoraTaskListenerOptions {
   stateStore: ListenerStateStore;
   runner: ProfileTaskRunner;
   profiles: string[];
+  groups?: string[];
   bootstrapMode?: BootstrapMode;
   maxMessagesPerGroup?: number;
 }
@@ -45,12 +46,15 @@ const TASK_PATTERN = /^TASK\s+([A-Za-z0-9][A-Za-z0-9._-]{1,80})\b/i;
 
 export class AgoraTaskListener {
   private readonly profiles: string[];
+  private readonly groupFilter: Set<string> | null;
   private readonly bootstrapMode: BootstrapMode;
   private readonly maxMessagesPerGroup: number;
 
   constructor(private readonly options: AgoraTaskListenerOptions) {
     this.profiles = [...new Set(options.profiles.map((profile) => profile.trim()).filter(Boolean))];
     if (this.profiles.length === 0) throw new Error('At least one listener profile is required');
+    const groups = options.groups?.map((group) => group.trim().toLowerCase()).filter(Boolean) ?? [];
+    this.groupFilter = groups.length > 0 ? new Set(groups) : null;
     this.bootstrapMode = options.bootstrapMode ?? 'latest';
     this.maxMessagesPerGroup = Math.min(Math.max(options.maxMessagesPerGroup ?? 50, 1), 200);
   }
@@ -68,7 +72,7 @@ export class AgoraTaskListener {
         continue;
       }
 
-      for (const group of groups) {
+      for (const group of groups.filter((item) => !this.groupFilter || this.groupFilter.has(item.id))) {
         const groupState = getGroupState(state, profileId, group.id);
         let messages: AgoraMessage[];
         try {

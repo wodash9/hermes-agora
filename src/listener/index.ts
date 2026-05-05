@@ -10,6 +10,7 @@ interface ListenerCliConfig {
   once: boolean;
   intervalMs: number;
   profiles: string[];
+  groups: string[];
   stateFile: string;
   bootstrapMode: BootstrapMode;
   apiUrl: string;
@@ -25,10 +26,11 @@ async function main() {
     stateStore: new FileListenerStateStore(config.stateFile),
     runner: createHermesCliRunner({ hermesBin: config.hermesBin, timeoutMs: config.hermesTimeoutMs }),
     profiles: config.profiles,
+    groups: config.groups,
     bootstrapMode: config.bootstrapMode
   });
 
-  console.log(`agora-listener starting profiles=${config.profiles.join(',')} mode=${config.once ? 'once' : 'daemon'} bootstrap=${config.bootstrapMode}`);
+  console.log(`agora-listener starting profiles=${config.profiles.join(',')} groups=${config.groups.length ? config.groups.join(',') : '*'} mode=${config.once ? 'once' : 'daemon'} bootstrap=${config.bootstrapMode}`);
   do {
     const tick = await listener.tick();
     console.log(`agora-listener tick processed=${tick.processed} skipped=${tick.skipped} bootstrapped=${tick.bootstrapped} errors=${tick.errors.length}`);
@@ -42,6 +44,7 @@ export function readListenerConfig(args: string[], env: NodeJS.ProcessEnv): List
   const serverConfig = loadServerConfig({ ...env, NODE_ENV: env.NODE_ENV ?? 'development' });
   const arg = readArgs(args);
   const rawProfiles = arg.profile ?? env.HERMES_AGORA_LISTENER_PROFILES ?? env.HERMES_AGORA_LISTENER_PROFILE;
+  const rawGroups = arg.group ?? env.HERMES_AGORA_LISTENER_GROUPS ?? env.HERMES_AGORA_LISTENER_GROUP;
   const profiles = rawProfiles
     ? rawProfiles.split(',').map((profile) => profile.trim()).filter(Boolean)
     : Object.keys(serverConfig.agentProfiles).filter((profileId) => !serverConfig.agentProfiles[profileId].scopes.includes('admin'));
@@ -53,6 +56,7 @@ export function readListenerConfig(args: string[], env: NodeJS.ProcessEnv): List
     once: arg.once === 'true' || env.HERMES_AGORA_LISTENER_ONCE === 'true',
     intervalMs: clampNumber(arg.intervalMs ?? env.HERMES_AGORA_LISTENER_INTERVAL_MS, 30000, 1000, 300000),
     profiles,
+    groups: rawGroups ? rawGroups.split(',').map((group) => group.trim()).filter(Boolean) : [],
     stateFile: arg.stateFile ?? env.HERMES_AGORA_LISTENER_STATE_FILE ?? join(process.cwd(), 'data', 'agora-listener-state.json'),
     bootstrapMode: bootstrapModeRaw,
     apiUrl: arg.apiUrl ?? env.HERMES_AGORA_URL ?? serverConfig.publicAppUrl,
