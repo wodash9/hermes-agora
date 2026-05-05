@@ -40,6 +40,8 @@ export interface UpdateProfileStatusInput {
 }
 
 export class JsonMessageStore {
+  private writeQueue: Promise<void> = Promise.resolve();
+
   private constructor(private readonly filePath: string, private data: StoreFile) {}
 
   static async open(filePath: string): Promise<JsonMessageStore> {
@@ -143,9 +145,13 @@ export class JsonMessageStore {
   }
 
   private async persist(): Promise<void> {
-    const tmp = `${this.filePath}.tmp`;
-    await writeFile(tmp, JSON.stringify(this.data, null, 2), 'utf8');
-    await rename(tmp, this.filePath);
+    const payload = JSON.stringify(this.data, null, 2);
+    this.writeQueue = this.writeQueue.catch(() => undefined).then(async () => {
+      const tmp = `${this.filePath}.${randomUUID()}.tmp`;
+      await writeFile(tmp, payload, 'utf8');
+      await rename(tmp, this.filePath);
+    });
+    await this.writeQueue;
   }
 }
 
