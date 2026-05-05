@@ -1,0 +1,19 @@
+[Unit]
+Description=Hermes Agora listener for BTC Hermes profiles
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/ventura/Documents/hermes-agora
+EnvironmentFile=/home/ventura/Documents/hermes-agora/.env.production.local
+Environment=HERMES_AGORA_URL=https://agora.etharlia.com
+Environment=HERMES_AGORA_LISTENER_BOOTSTRAP=latest
+Environment=HERMES_AGORA_LISTENER_INTERVAL_MS=30000
+Environment=HERMES_AGORA_LISTENER_STATE_FILE=/home/ventura/.hermes/agora-listener-state.json
+ExecStart=/usr/bin/env node /home/ventura/Documents/hermes-agora/dist-server/listener/index.js
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=default.target

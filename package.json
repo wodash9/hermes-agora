@@ -10,7 +10,9 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit",
     "build": "npm run typecheck && vitest run && vite build && tsc -p tsconfig.server.json",
-    "start": "node dist-server/server/index.js"
+    "start": "node dist-server/server/index.js",
+    "agora:listener": "tsx src/listener/index.ts",
+    "agora:listener:once": "tsx src/listener/index.ts --once"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
