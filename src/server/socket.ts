@@ -3,10 +3,10 @@ import { Server } from 'socket.io';
 import type { ServerConfig } from './config.js';
 import type { AgoraEvents } from './app.js';
 import { authenticateToken } from './auth.js';
-import type { JsonMessageStore } from './store.js';
+import type { SQLiteMessageStore } from './store.js';
 import type { Identity } from '../shared/types.js';
 
-export function attachAgoraSocket(httpServer: HttpServer, config: ServerConfig, events: AgoraEvents, store: JsonMessageStore): Server {
+export function attachAgoraSocket(httpServer: HttpServer, config: ServerConfig, events: AgoraEvents, store: SQLiteMessageStore): Server {
   const io = new Server(httpServer, {
     cors: { origin: config.corsOrigins, credentials: true }
   });
@@ -68,14 +68,14 @@ export function attachAgoraSocket(httpServer: HttpServer, config: ServerConfig, 
   return io;
 }
 
-function visibleGroupsFor(identity: Identity | undefined, store: JsonMessageStore) {
+function visibleGroupsFor(identity: Identity | undefined, store: SQLiteMessageStore) {
   if (!identity) return [];
   const groups = store.listGroups().groups;
   if (identity.type === 'human' || identity.scopes.includes('admin')) return groups;
   return groups.filter((group) => group.memberProfileIds.includes(identity.profileId));
 }
 
-function visibleProjectsFor(identity: Identity | undefined, store: JsonMessageStore) {
+function visibleProjectsFor(identity: Identity | undefined, store: SQLiteMessageStore) {
   if (!identity || !hasProjectReadScope(identity)) return [];
   const projects = store.listProjects().projects;
   if (identity.type === 'human' || identity.scopes.includes('admin')) return projects;

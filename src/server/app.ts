@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import type { ServerConfig } from './config.js';
 import { requireIdentity, requireScope, type AuthenticatedRequest } from './auth.js';
-import { JsonMessageStore, normalizeChannel, normalizeGroupId, normalizeProjectId, parseKanbanStatus, parseProfilePresence, parseProjectStatus, parseTaskDocumentKind } from './store.js';
+import { SQLiteMessageStore, normalizeChannel, normalizeGroupId, normalizeProjectId, parseKanbanStatus, parseProfilePresence, parseProjectStatus, parseTaskDocumentKind } from './store.js';
 import { canAccessChannel } from './auth.js';
 import type { AgoraGroup, AgoraMessage, AgoraProject, AgoraTask, Identity, TaskDocument } from '../shared/types.js';
 
@@ -24,7 +24,7 @@ export interface AgoraEvents {
 
 export interface CreateAgoraAppOptions {
   config: ServerConfig;
-  store: JsonMessageStore;
+  store: SQLiteMessageStore;
 }
 
 export async function createAgoraApp({ config, store }: CreateAgoraAppOptions) {
@@ -371,14 +371,14 @@ function isProjectMember(identity: Identity, project: AgoraProject): boolean {
   return canManageProjects(identity) || project.memberProfileIds.includes(identity.profileId);
 }
 
-function requireGroupAccess(store: JsonMessageStore, identity: Identity, groupIdRaw: string): AgoraGroup {
+function requireGroupAccess(store: SQLiteMessageStore, identity: Identity, groupIdRaw: string): AgoraGroup {
   const group = store.getGroup(groupIdRaw);
   if (!group) throw new Error('Group not found');
   if (!isGroupMember(identity, group)) throw new Error('Group forbidden for this identity');
   return group;
 }
 
-function requireProjectAccess(store: JsonMessageStore, identity: Identity, projectIdRaw: string): AgoraProject {
+function requireProjectAccess(store: SQLiteMessageStore, identity: Identity, projectIdRaw: string): AgoraProject {
   const project = store.getProject(projectIdRaw);
   if (!project) throw new Error('Project not found');
   if (!isProjectMember(identity, project)) throw new Error('Project forbidden for this identity');

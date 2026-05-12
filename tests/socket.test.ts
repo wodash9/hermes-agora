@@ -8,7 +8,7 @@ import { io as createClient, type Socket } from 'socket.io-client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createAgoraApp } from '../src/server/app';
 import { loadServerConfig } from '../src/server/config';
-import { JsonMessageStore } from '../src/server/store';
+import { SQLiteMessageStore } from '../src/server/store';
 import { attachAgoraSocket } from '../src/server/socket';
 
 let dir: string;
@@ -25,7 +25,7 @@ beforeEach(async () => {
     'limited-agent': { displayName: 'Limited', scopes: ['messages:read', 'messages:write'], channels: ['general'] }
   };
   const config = loadServerConfig({ HUB_AGENT_TOKEN: 'test-secret', DATA_FILE: join(dir, 'store.json'), CORS_ORIGIN: 'http://localhost:3000', HERMES_AGORA_PROFILES_JSON: JSON.stringify(profiles) });
-  const store = await JsonMessageStore.open(config.dataFile);
+  const store = await SQLiteMessageStore.open(config.dataFile);
   const created = await createAgoraApp({ config, store });
   app = created.app;
   httpServer = createServer(app);

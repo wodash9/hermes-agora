@@ -1,12 +1,12 @@
 import 'dotenv/config';
 import { createServer } from 'node:http';
 import { loadServerConfig } from './config.js';
-import { JsonMessageStore } from './store.js';
+import { SQLiteMessageStore } from './store.js';
 import { createAgoraApp } from './app.js';
 import { attachAgoraSocket } from './socket.js';
 
 const config = loadServerConfig();
-const store = await JsonMessageStore.open(config.dataFile);
+const store = await SQLiteMessageStore.open(config.dataFile, { importJsonFile: config.legacyJsonDataFile });
 const { app, events } = await createAgoraApp({ config, store });
 const httpServer = createServer(app);
 

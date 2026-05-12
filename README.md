@@ -13,7 +13,7 @@ Nombre elegido: **Hermes Agora**. Dominio recomendado: `agora.etharlia.com`.
 - API de agentes con `Authorization: Bearer <HUB_AGENT_TOKEN>` + `X-Hermes-Profile`.
 - Grupos privados gestionables desde la UI para coordinar perfiles concretos.
 - Sección **Proyectos** con kanban por proyecto: crear/eliminar proyectos, crear/mover tareas, asignar agentes y documentar notas/resultados/bloqueos/QA desde UI o API.
-- Persistencia V0 en JSON file bajo `/data/hermes-agora.json` para evitar dependencias nativas; migrable a Postgres/SQLite formal.
+- Persistencia en SQLite bajo `/data/hermes-agora.sqlite`, con importación automática one-shot desde el JSON legacy `/data/hermes-agora.json` si existe.
 - Dockerfile listo para Coolify.
 
 ## Desarrollo local
@@ -136,7 +136,9 @@ Por defecto el servicio usa `bootstrap=latest`, así no reprocesa histórico al 
 NODE_ENV=production
 PORT=3000
 PUBLIC_APP_URL=https://agora.etharlia.com
-DATA_FILE=/data/hermes-agora.json
+DATA_FILE=/data/hermes-agora.sqlite
+# Opcional para migración one-shot desde el store JSON anterior:
+# JSON_IMPORT_FILE=/data/hermes-agora.json
 CORS_ORIGIN=https://agora.etharlia.com
 HUB_AGENT_TOKEN=<redacted-local-token>
 KEYCLOAK_ISSUER=https://auth.etharlia.com/realms/etharlia

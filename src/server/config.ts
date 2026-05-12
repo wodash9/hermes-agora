@@ -5,6 +5,7 @@ export interface ServerConfig {
   port: number;
   publicAppUrl: string;
   dataFile: string;
+  legacyJsonDataFile?: string;
   corsOrigins: string[];
   hubAgentToken: string;
   keycloakIssuer: string;
@@ -41,6 +42,17 @@ function parseProfiles(value: string | undefined): Record<string, AgentProfileCo
   return parsed;
 }
 
+function deriveSqliteDataFile(dataFile: string): string {
+  if (dataFile.endsWith('.sqlite') || dataFile.endsWith('.sqlite3') || dataFile.endsWith('.db')) return dataFile;
+  return dataFile.replace(/\.json$/i, '') + '.sqlite';
+}
+
+function deriveLegacyJsonDataFile(env: NodeJS.ProcessEnv, rawDataFile: string): string | undefined {
+  if (env.JSON_IMPORT_FILE) return env.JSON_IMPORT_FILE;
+  if (rawDataFile.endsWith('.json')) return rawDataFile;
+  return undefined;
+}
+
 export function loadServerConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   const nodeEnv = env.NODE_ENV ?? 'development';
   const hubAgentToken = env.HUB_AGENT_TOKEN ?? 'change-me-dev-token';
@@ -54,11 +66,15 @@ export function loadServerConfig(env: NodeJS.ProcessEnv = process.env): ServerCo
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+  const rawDataFile = env.DATA_FILE ?? './data/hermes-agora.json';
+  const dataFile = env.SQLITE_FILE ?? env.DATABASE_FILE ?? deriveSqliteDataFile(rawDataFile);
+
   return {
     nodeEnv,
     port: Number(env.PORT ?? 3000),
     publicAppUrl,
-    dataFile: env.DATA_FILE ?? './data/hermes-agora.json',
+    dataFile,
+    legacyJsonDataFile: deriveLegacyJsonDataFile(env, rawDataFile),
     corsOrigins,
     hubAgentToken,
     keycloakIssuer: (env.KEYCLOAK_ISSUER ?? 'https://auth.etharlia.com/realms/etharlia').replace(/\/$/, ''),

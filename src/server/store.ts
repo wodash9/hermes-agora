@@ -1,4 +1,5 @@
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import Database from 'better-sqlite3';
+import { access, mkdir, readFile, rename } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { AgentProfileConfig, AgoraGroup, AgoraMessage, AgoraProject, AgoraTask, Author, GroupListResponse, KanbanStatus, MessageListResponse, ProfilePresence, ProfileStatus, ProfileStatusResponse, ProjectListResponse, ProjectStatus, TaskDocument, TaskDocumentKind, TaskDocumentListResponse, TaskListResponse } from '../shared/types.js';
@@ -100,32 +101,87 @@ export interface CreateTaskDocumentInput {
   author: Author;
 }
 
-export class JsonMessageStore {
-  private writeQueue: Promise<void> = Promise.resolve();
+export interface SQLiteMessageStoreOptions {
+  importJsonFile?: string;
+}
 
-  private constructor(private readonly filePath: string, private data: StoreFile) {}
+type MessageRow = {
+  id: string;
+  channel: string;
+  group_id: string | null;
+  text: string;
+  author_json: string;
+  metadata_json: string;
+  created_at: string;
+  thread_id: string | null;
+  reply_to: string | null;
+};
 
-  static async open(filePath: string): Promise<JsonMessageStore> {
+type GroupRow = {
+  id: string;
+  name: string;
+  member_profile_ids_json: string;
+  created_at: string;
+  updated_at: string;
+  created_by_json: string;
+};
+
+type ProjectRow = {
+  id: string;
+  name: string;
+  description: string;
+  status: ProjectStatus;
+  member_profile_ids_json: string;
+  created_at: string;
+  updated_at: string;
+  created_by_json: string;
+};
+
+type TaskRow = {
+  id: string;
+  project_id: string;
+  title: string;
+  description: string;
+  status: KanbanStatus;
+  assignee_profile_ids_json: string;
+  labels_json: string;
+  order_index: number;
+  source_message_id: string | null;
+  source_group_id: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by_json: string;
+  updated_by_json: string | null;
+};
+
+type TaskDocumentRow = {
+  id: string;
+  task_id: string;
+  kind: TaskDocumentKind;
+  body: string;
+  author_json: string;
+  created_at: string;
+};
+
+type ProfileStatusRow = {
+  profile_id: string;
+  status: ProfilePresence;
+  last_seen_at: string;
+  last_message_at: string | null;
+  note: string | null;
+};
+
+export class SQLiteMessageStore {
+  private constructor(private readonly db: Database.Database) {}
+
+  static async open(filePath: string, options: SQLiteMessageStoreOptions = {}): Promise<SQLiteMessageStore> {
     await mkdir(dirname(filePath), { recursive: true });
-    try {
-      const raw = await readFile(filePath, 'utf8');
-      const parsed = JSON.parse(raw) as Partial<StoreFile>;
-      if (parsed.version !== 1 || !Array.isArray(parsed.messages)) throw new Error('Invalid store shape');
-      return new JsonMessageStore(filePath, {
-        version: 1,
-        messages: parsed.messages.map((message) => ({ ...message, groupId: message.groupId ?? null })),
-        groups: parsed.groups ?? [],
-        profileStatuses: parsed.profileStatuses ?? {},
-        projects: parsed.projects ?? [],
-        tasks: parsed.tasks ?? [],
-        taskDocuments: parsed.taskDocuments ?? []
-      });
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-      const store = new JsonMessageStore(filePath, { version: 1, messages: [], groups: [], profileStatuses: {}, projects: [], tasks: [], taskDocuments: [] });
-      await store.persist();
-      return store;
-    }
+    const db = new Database(filePath);
+    const store = new SQLiteMessageStore(db);
+    store.configure();
+    store.migrateSchema();
+    await store.importJsonIfNeeded(options.importJsonFile);
+    return store;
   }
 
   async createMessage(input: CreateMessageInput): Promise<AgoraMessage> {
@@ -148,44 +204,47 @@ export class JsonMessageStore {
       threadId: input.threadId ?? null,
       replyTo: input.replyTo ?? null
     };
-    this.data.messages.push(message);
-    this.setProfileStatus(input.author.profileId, { status: 'online', lastSeenAt: now, lastMessageAt: now });
-    await this.persist();
+    const insert = this.db.prepare(`INSERT INTO messages (id, channel, group_id, text, author_json, metadata_json, created_at, thread_id, reply_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    const tx = this.db.transaction(() => {
+      insert.run(message.id, message.channel, message.groupId ?? null, message.text, toJson(message.author), toJson(message.metadata ?? {}), message.createdAt, message.threadId ?? null, message.replyTo ?? null);
+      this.setProfileStatus(input.author.profileId, { status: 'online', lastSeenAt: now, lastMessageAt: now });
+    });
+    tx();
     return message;
   }
 
   async listMessages(input: ListMessagesInput = {}): Promise<MessageListResponse> {
     const limit = Math.min(Math.max(Number(input.limit ?? 50), 1), 200);
-    let messages = [...this.data.messages];
+    let rows = this.db.prepare(`SELECT * FROM messages ORDER BY created_at ASC, rowid ASC`).all() as MessageRow[];
     if (input.groupId) {
       const groupId = normalizeGroupId(input.groupId);
-      messages = messages.filter((message) => message.groupId === groupId);
+      rows = rows.filter((message) => message.group_id === groupId);
     } else if (input.channel) {
       const channel = normalizeChannel(input.channel);
-      messages = messages.filter((message) => !message.groupId && message.channel === channel);
+      rows = rows.filter((message) => !message.group_id && message.channel === channel);
     }
     if (input.after) {
-      const index = messages.findIndex((message) => message.id === input.after);
-      if (index >= 0) messages = messages.slice(index + 1);
+      const index = rows.findIndex((message) => message.id === input.after);
+      if (index >= 0) rows = rows.slice(index + 1);
     }
     if (input.before) {
-      const index = messages.findIndex((message) => message.id === input.before);
-      if (index >= 0) messages = messages.slice(0, index);
+      const index = rows.findIndex((message) => message.id === input.before);
+      if (index >= 0) rows = rows.slice(0, index);
     }
-    messages = messages.slice(-limit);
+    const messages = rows.slice(-limit).map(rowToMessage);
     return { messages, nextCursor: messages.at(-1)?.id ?? null };
   }
 
   async createGroup(input: CreateGroupInput): Promise<AgoraGroup> {
     const name = normalizeGroupName(input.name);
-    const id = input.id ? normalizeGroupId(input.id) : uniqueGroupId(slugifyGroupName(name), this.data.groups);
-    if (this.data.groups.some((group) => group.id === id)) throw new Error('Group already exists');
+    const groups = this.allGroups();
+    const id = input.id ? normalizeGroupId(input.id) : uniqueGroupId(slugifyGroupName(name), groups);
+    if (groups.some((group) => group.id === id)) throw new Error('Group already exists');
     const memberProfileIds = normalizeMemberProfileIds(input.memberProfileIds);
     if (memberProfileIds.length === 0) throw new Error('Group needs at least one member');
     const now = new Date().toISOString();
     const group: AgoraGroup = { id, name, memberProfileIds, createdAt: now, updatedAt: now, createdBy: input.createdBy };
-    this.data.groups.push(group);
-    await this.persist();
+    this.insertGroup(group);
     return group;
   }
 
@@ -200,39 +259,40 @@ export class JsonMessageStore {
       group.memberProfileIds = memberProfileIds;
     }
     group.updatedAt = new Date().toISOString();
-    await this.persist();
+    this.insertGroup(group);
     return group;
   }
 
   async deleteGroup(idRaw: string): Promise<boolean> {
     const id = normalizeGroupId(idRaw);
-    const index = this.data.groups.findIndex((group) => group.id === id);
-    if (index === -1) return false;
-    this.data.groups.splice(index, 1);
-    this.data.messages = this.data.messages.filter((message) => message.groupId !== id);
-    await this.persist();
-    return true;
+    const tx = this.db.transaction(() => {
+      const deleted = this.db.prepare(`DELETE FROM groups WHERE id = ?`).run(id).changes;
+      this.db.prepare(`DELETE FROM messages WHERE group_id = ?`).run(id);
+      return deleted > 0;
+    });
+    return tx();
   }
 
   getGroup(idRaw: string): AgoraGroup | null {
     const id = normalizeGroupId(idRaw);
-    return this.data.groups.find((group) => group.id === id) ?? null;
+    const row = this.db.prepare(`SELECT * FROM groups WHERE id = ?`).get(id) as GroupRow | undefined;
+    return row ? rowToGroup(row) : null;
   }
 
   listGroups(): GroupListResponse {
-    return { groups: [...this.data.groups].sort((left, right) => left.name.localeCompare(right.name)), generatedAt: new Date().toISOString() };
+    return { groups: this.allGroups().sort((left, right) => left.name.localeCompare(right.name)), generatedAt: new Date().toISOString() };
   }
 
   async createProject(input: CreateProjectInput): Promise<AgoraProject> {
     const name = normalizeProjectName(input.name);
-    const id = input.id ? normalizeProjectId(input.id) : uniqueProjectId(slugifyProjectName(name), this.data.projects);
-    if (this.data.projects.some((project) => project.id === id)) throw new Error('Project already exists');
+    const projects = this.allProjects();
+    const id = input.id ? normalizeProjectId(input.id) : uniqueProjectId(slugifyProjectName(name), projects);
+    if (projects.some((project) => project.id === id)) throw new Error('Project already exists');
     const memberProfileIds = normalizeMemberProfileIds(input.memberProfileIds);
     if (memberProfileIds.length === 0) throw new Error('Project needs at least one member');
     const now = new Date().toISOString();
     const project: AgoraProject = { id, name, description: normalizeDescription(input.description ?? ''), status: 'active', memberProfileIds, createdAt: now, updatedAt: now, createdBy: input.createdBy };
-    this.data.projects.push(project);
-    await this.persist();
+    this.insertProject(project);
     return project;
   }
 
@@ -241,39 +301,40 @@ export class JsonMessageStore {
     if (!project) throw new Error('Project not found');
     if (typeof input.name === 'string') project.name = normalizeProjectName(input.name);
     if (typeof input.description === 'string') project.description = normalizeDescription(input.description);
-    if (input.memberProfileIds) {
-      const memberProfileIds = normalizeMemberProfileIds(input.memberProfileIds);
-      if (memberProfileIds.length === 0) throw new Error('Project needs at least one member');
-      project.memberProfileIds = memberProfileIds;
-      for (const task of this.data.tasks.filter((item) => item.projectId === project.id)) {
-        task.assigneeProfileIds = task.assigneeProfileIds.filter((profileId) => memberProfileIds.includes(profileId));
-      }
-    }
+    const nextMemberProfileIds = input.memberProfileIds ? normalizeMemberProfileIds(input.memberProfileIds) : null;
+    if (nextMemberProfileIds && nextMemberProfileIds.length === 0) throw new Error('Project needs at least one member');
     if (input.status) project.status = parseProjectStatus(input.status);
     project.updatedAt = new Date().toISOString();
-    await this.persist();
+
+    const tx = this.db.transaction(() => {
+      if (nextMemberProfileIds) {
+        project.memberProfileIds = nextMemberProfileIds;
+        const tasks = this.listProjectTasks(project.id).tasks;
+        const updateAssignees = this.db.prepare(`UPDATE tasks SET assignee_profile_ids_json = ? WHERE id = ?`);
+        for (const task of tasks) {
+          updateAssignees.run(toJson(task.assigneeProfileIds.filter((profileId) => nextMemberProfileIds.includes(profileId))), task.id);
+        }
+      }
+      this.insertProject(project);
+    });
+    tx();
     return project;
   }
 
   async deleteProject(idRaw: string): Promise<boolean> {
     const id = normalizeProjectId(idRaw);
-    const index = this.data.projects.findIndex((project) => project.id === id);
-    if (index === -1) return false;
-    this.data.projects.splice(index, 1);
-    const deletedTaskIds = new Set(this.data.tasks.filter((task) => task.projectId === id).map((task) => task.id));
-    this.data.tasks = this.data.tasks.filter((task) => task.projectId !== id);
-    this.data.taskDocuments = this.data.taskDocuments.filter((document) => !deletedTaskIds.has(document.taskId));
-    await this.persist();
-    return true;
+    const tx = this.db.transaction(() => this.db.prepare(`DELETE FROM projects WHERE id = ?`).run(id).changes > 0);
+    return tx();
   }
 
   getProject(idRaw: string): AgoraProject | null {
     const id = normalizeProjectId(idRaw);
-    return this.data.projects.find((project) => project.id === id) ?? null;
+    const row = this.db.prepare(`SELECT * FROM projects WHERE id = ?`).get(id) as ProjectRow | undefined;
+    return row ? rowToProject(row) : null;
   }
 
   listProjects(): ProjectListResponse {
-    return { projects: [...this.data.projects].sort((left, right) => left.name.localeCompare(right.name)), generatedAt: new Date().toISOString() };
+    return { projects: this.allProjects().sort((left, right) => left.name.localeCompare(right.name)), generatedAt: new Date().toISOString() };
   }
 
   async createProjectTask(input: CreateTaskInput): Promise<AgoraTask> {
@@ -289,7 +350,7 @@ export class JsonMessageStore {
       status: input.status ? parseKanbanStatus(input.status) : 'backlog',
       assigneeProfileIds: normalizeAssignees(input.assigneeProfileIds ?? [], project.memberProfileIds),
       labels: normalizeLabels(input.labels ?? []),
-      order: nextTaskOrder(this.data.tasks, project.id),
+      order: nextTaskOrder(this.listProjectTasks(project.id).tasks),
       sourceMessageId: input.sourceMessageId ?? null,
       sourceGroupId: input.sourceGroupId ?? null,
       createdAt: now,
@@ -297,9 +358,11 @@ export class JsonMessageStore {
       createdBy: input.createdBy,
       updatedBy: input.createdBy
     };
-    this.data.tasks.push(task);
-    project.updatedAt = now;
-    await this.persist();
+    const tx = this.db.transaction(() => {
+      this.insertTask(task);
+      this.db.prepare(`UPDATE projects SET updated_at = ? WHERE id = ?`).run(now, project.id);
+    });
+    tx();
     return task;
   }
 
@@ -317,22 +380,26 @@ export class JsonMessageStore {
     const now = new Date().toISOString();
     task.updatedAt = now;
     task.updatedBy = input.updatedBy;
-    project.updatedAt = now;
-    await this.persist();
+    const tx = this.db.transaction(() => {
+      this.insertTask(task);
+      this.db.prepare(`UPDATE projects SET updated_at = ? WHERE id = ?`).run(now, project.id);
+    });
+    tx();
     return task;
   }
 
   getProjectTask(projectIdRaw: string, taskId: string): AgoraTask | null {
     const projectId = normalizeProjectId(projectIdRaw);
-    return this.data.tasks.find((task) => task.projectId === projectId && task.id === taskId) ?? null;
+    const row = this.db.prepare(`SELECT * FROM tasks WHERE project_id = ? AND id = ?`).get(projectId, taskId) as TaskRow | undefined;
+    return row ? rowToTask(row) : null;
   }
 
   listProjectTasks(projectIdRaw: string, filters: { status?: KanbanStatus; assigneeProfileId?: string } = {}): TaskListResponse {
     const projectId = normalizeProjectId(projectIdRaw);
-    let tasks = this.data.tasks.filter((task) => task.projectId === projectId);
+    let tasks = (this.db.prepare(`SELECT * FROM tasks WHERE project_id = ? ORDER BY order_index ASC, created_at ASC`).all(projectId) as TaskRow[]).map(rowToTask);
     if (filters.status) tasks = tasks.filter((task) => task.status === parseKanbanStatus(filters.status));
     if (filters.assigneeProfileId) tasks = tasks.filter((task) => task.assigneeProfileIds.includes(filters.assigneeProfileId!.trim().toLowerCase()));
-    return { tasks: [...tasks].sort((left, right) => left.order - right.order || left.createdAt.localeCompare(right.createdAt)), generatedAt: new Date().toISOString() };
+    return { tasks, generatedAt: new Date().toISOString() };
   }
 
   async appendTaskDocument(projectIdRaw: string, taskId: string, input: CreateTaskDocumentInput): Promise<TaskDocument> {
@@ -342,37 +409,38 @@ export class JsonMessageStore {
     if (!body) throw new Error('Task document body is required');
     if (body.length > 8000) throw new Error('Task document exceeds 8000 characters');
     const document: TaskDocument = { id: `doc_${randomUUID()}`, taskId: task.id, kind: input.kind ? parseTaskDocumentKind(input.kind) : 'note', body, author: input.author, createdAt: new Date().toISOString() };
-    this.data.taskDocuments.push(document);
-    task.updatedAt = document.createdAt;
-    task.updatedBy = input.author;
-    const project = this.getProject(projectIdRaw);
-    if (project) project.updatedAt = document.createdAt;
-    await this.persist();
+    const tx = this.db.transaction(() => {
+      this.insertTaskDocument(document);
+      this.db.prepare(`UPDATE tasks SET updated_at = ?, updated_by_json = ? WHERE id = ?`).run(document.createdAt, toJson(input.author), task.id);
+      this.db.prepare(`UPDATE projects SET updated_at = ? WHERE id = ?`).run(document.createdAt, normalizeProjectId(projectIdRaw));
+    });
+    tx();
     return document;
   }
 
   listTaskDocuments(projectIdRaw: string, taskId: string): TaskDocumentListResponse {
     const task = this.getProjectTask(projectIdRaw, taskId);
     if (!task) throw new Error('Task not found');
-    return { documents: this.data.taskDocuments.filter((document) => document.taskId === task.id).sort((left, right) => left.createdAt.localeCompare(right.createdAt)), generatedAt: new Date().toISOString() };
+    const documents = (this.db.prepare(`SELECT * FROM task_documents WHERE task_id = ? ORDER BY created_at ASC, rowid ASC`).all(task.id) as TaskDocumentRow[]).map(rowToTaskDocument);
+    return { documents, generatedAt: new Date().toISOString() };
   }
 
   async updateProfileStatus(input: UpdateProfileStatusInput): Promise<StoredProfileStatus> {
     const now = new Date().toISOString();
-    const current = this.data.profileStatuses[input.profileId];
-    const next = this.setProfileStatus(input.profileId, {
+    const current = this.profileStatus(input.profileId);
+    const next: StoredProfileStatus = {
       status: input.status,
-      note: input.note ?? current?.note ?? null,
       lastSeenAt: now,
-      lastMessageAt: input.lastMessageAt ?? current?.lastMessageAt ?? null
-    });
-    await this.persist();
+      lastMessageAt: input.lastMessageAt ?? current?.lastMessageAt ?? null,
+      note: input.note ?? current?.note ?? null
+    };
+    this.db.prepare(`INSERT INTO profile_statuses (profile_id, status, last_seen_at, last_message_at, note) VALUES (?, ?, ?, ?, ?) ON CONFLICT(profile_id) DO UPDATE SET status = excluded.status, last_seen_at = excluded.last_seen_at, last_message_at = excluded.last_message_at, note = excluded.note`).run(input.profileId, next.status, next.lastSeenAt, next.lastMessageAt ?? null, next.note ?? null);
     return next;
   }
 
   listProfileStatuses(agentProfiles: Record<string, AgentProfileConfig>): ProfileStatusResponse {
     const profiles: ProfileStatus[] = Object.entries(agentProfiles).map(([profileId, config]) => {
-      const stored = this.data.profileStatuses[profileId];
+      const stored = this.profileStatus(profileId);
       return {
         profileId,
         displayName: config.displayName,
@@ -387,26 +455,188 @@ export class JsonMessageStore {
     return { profiles, generatedAt: new Date().toISOString() };
   }
 
+  close(): void {
+    this.db.close();
+  }
+
+  private configure(): void {
+    this.db.pragma('journal_mode = WAL');
+    this.db.pragma('foreign_keys = ON');
+    this.db.pragma('busy_timeout = 5000');
+  }
+
+  private migrateSchema(): void {
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS meta (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS messages (
+        id TEXT PRIMARY KEY,
+        channel TEXT NOT NULL,
+        group_id TEXT,
+        text TEXT NOT NULL,
+        author_json TEXT NOT NULL,
+        metadata_json TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL,
+        thread_id TEXT,
+        reply_to TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_messages_channel_created ON messages(channel, created_at);
+      CREATE INDEX IF NOT EXISTS idx_messages_group_created ON messages(group_id, created_at);
+
+      CREATE TABLE IF NOT EXISTS groups (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        member_profile_ids_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        created_by_json TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS profile_statuses (
+        profile_id TEXT PRIMARY KEY,
+        status TEXT NOT NULL,
+        last_seen_at TEXT NOT NULL,
+        last_message_at TEXT,
+        note TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS projects (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL,
+        member_profile_ids_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        created_by_json TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_projects_name ON projects(name);
+
+      CREATE TABLE IF NOT EXISTS tasks (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL,
+        assignee_profile_ids_json TEXT NOT NULL,
+        labels_json TEXT NOT NULL,
+        order_index INTEGER NOT NULL DEFAULT 0,
+        source_message_id TEXT,
+        source_group_id TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        created_by_json TEXT NOT NULL,
+        updated_by_json TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_tasks_project_order ON tasks(project_id, order_index, created_at);
+      CREATE INDEX IF NOT EXISTS idx_tasks_project_status ON tasks(project_id, status);
+
+      CREATE TABLE IF NOT EXISTS task_documents (
+        id TEXT PRIMARY KEY,
+        task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+        kind TEXT NOT NULL,
+        body TEXT NOT NULL,
+        author_json TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_task_documents_task_created ON task_documents(task_id, created_at);
+    `);
+    this.db.prepare(`INSERT INTO meta (key, value) VALUES ('schema_version', '1') ON CONFLICT(key) DO NOTHING`).run();
+  }
+
+  private async importJsonIfNeeded(importJsonFile?: string): Promise<void> {
+    if (!importJsonFile || this.meta('legacy_json_imported') === 'true') return;
+    try {
+      await access(importJsonFile);
+    } catch {
+      return;
+    }
+    const raw = await readFile(importJsonFile, 'utf8');
+    const parsed = JSON.parse(raw) as Partial<StoreFile>;
+    if (parsed.version !== 1 || !Array.isArray(parsed.messages)) throw new Error('Invalid legacy JSON store shape');
+    const store: StoreFile = {
+      version: 1,
+      messages: parsed.messages.map((message) => ({ ...message, groupId: message.groupId ?? null })),
+      groups: parsed.groups ?? [],
+      profileStatuses: parsed.profileStatuses ?? {},
+      projects: parsed.projects ?? [],
+      tasks: parsed.tasks ?? [],
+      taskDocuments: parsed.taskDocuments ?? []
+    };
+    const tx = this.db.transaction(() => {
+      for (const message of store.messages) this.insertMessage(message);
+      for (const group of store.groups) this.insertGroup(group);
+      for (const [profileId, status] of Object.entries(store.profileStatuses)) {
+        this.db.prepare(`INSERT INTO profile_statuses (profile_id, status, last_seen_at, last_message_at, note) VALUES (?, ?, ?, ?, ?) ON CONFLICT(profile_id) DO UPDATE SET status = excluded.status, last_seen_at = excluded.last_seen_at, last_message_at = excluded.last_message_at, note = excluded.note`).run(profileId, status.status, status.lastSeenAt, status.lastMessageAt ?? null, status.note ?? null);
+      }
+      for (const project of store.projects) this.insertProject(project);
+      for (const task of store.tasks) this.insertTask(task);
+      for (const document of store.taskDocuments) this.insertTaskDocument(document);
+      this.setMeta('legacy_json_imported', 'true');
+      this.setMeta('legacy_json_imported_at', new Date().toISOString());
+    });
+    tx();
+    try {
+      await rename(importJsonFile, `${importJsonFile}.migrated`);
+    } catch {
+      console.warn('Legacy JSON import completed; could not rename legacy file, future imports are skipped by SQLite metadata.');
+    }
+  }
+
+  private meta(key: string): string | null {
+    const row = this.db.prepare(`SELECT value FROM meta WHERE key = ?`).get(key) as { value: string } | undefined;
+    return row?.value ?? null;
+  }
+
+  private setMeta(key: string, value: string): void {
+    this.db.prepare(`INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`).run(key, value);
+  }
+
+  private allGroups(): AgoraGroup[] {
+    return (this.db.prepare(`SELECT * FROM groups`).all() as GroupRow[]).map(rowToGroup);
+  }
+
+  private allProjects(): AgoraProject[] {
+    return (this.db.prepare(`SELECT * FROM projects`).all() as ProjectRow[]).map(rowToProject);
+  }
+
+  private profileStatus(profileId: string): StoredProfileStatus | null {
+    const row = this.db.prepare(`SELECT * FROM profile_statuses WHERE profile_id = ?`).get(profileId) as ProfileStatusRow | undefined;
+    return row ? { status: row.status, lastSeenAt: row.last_seen_at, lastMessageAt: row.last_message_at, note: row.note } : null;
+  }
+
   private setProfileStatus(profileId: string, patch: Partial<StoredProfileStatus> & { status: ProfilePresence; lastSeenAt: string }): StoredProfileStatus {
-    const current = this.data.profileStatuses[profileId];
+    const current = this.profileStatus(profileId);
     const next: StoredProfileStatus = {
       status: patch.status,
       lastSeenAt: patch.lastSeenAt,
       lastMessageAt: patch.lastMessageAt ?? current?.lastMessageAt ?? null,
       note: patch.note ?? current?.note ?? null
     };
-    this.data.profileStatuses[profileId] = next;
+    this.db.prepare(`INSERT INTO profile_statuses (profile_id, status, last_seen_at, last_message_at, note) VALUES (?, ?, ?, ?, ?) ON CONFLICT(profile_id) DO UPDATE SET status = excluded.status, last_seen_at = excluded.last_seen_at, last_message_at = excluded.last_message_at, note = excluded.note`).run(profileId, next.status, next.lastSeenAt, next.lastMessageAt ?? null, next.note ?? null);
     return next;
   }
 
-  private async persist(): Promise<void> {
-    const payload = JSON.stringify(this.data, null, 2);
-    this.writeQueue = this.writeQueue.catch(() => undefined).then(async () => {
-      const tmp = `${this.filePath}.${randomUUID()}.tmp`;
-      await writeFile(tmp, payload, 'utf8');
-      await rename(tmp, this.filePath);
-    });
-    await this.writeQueue;
+  private insertMessage(message: AgoraMessage): void {
+    this.db.prepare(`INSERT INTO messages (id, channel, group_id, text, author_json, metadata_json, created_at, thread_id, reply_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET channel = excluded.channel, group_id = excluded.group_id, text = excluded.text, author_json = excluded.author_json, metadata_json = excluded.metadata_json, created_at = excluded.created_at, thread_id = excluded.thread_id, reply_to = excluded.reply_to`).run(message.id, message.channel, message.groupId ?? null, message.text, toJson(message.author), toJson(message.metadata ?? {}), message.createdAt, message.threadId ?? null, message.replyTo ?? null);
+  }
+
+  private insertGroup(group: AgoraGroup): void {
+    this.db.prepare(`INSERT INTO groups (id, name, member_profile_ids_json, created_at, updated_at, created_by_json) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name = excluded.name, member_profile_ids_json = excluded.member_profile_ids_json, updated_at = excluded.updated_at`).run(group.id, group.name, toJson(group.memberProfileIds), group.createdAt, group.updatedAt, toJson(group.createdBy));
+  }
+
+  private insertProject(project: AgoraProject): void {
+    this.db.prepare(`INSERT INTO projects (id, name, description, status, member_profile_ids_json, created_at, updated_at, created_by_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name = excluded.name, description = excluded.description, status = excluded.status, member_profile_ids_json = excluded.member_profile_ids_json, updated_at = excluded.updated_at`).run(project.id, project.name, project.description, project.status, toJson(project.memberProfileIds), project.createdAt, project.updatedAt, toJson(project.createdBy));
+  }
+
+  private insertTask(task: AgoraTask): void {
+    this.db.prepare(`INSERT INTO tasks (id, project_id, title, description, status, assignee_profile_ids_json, labels_json, order_index, source_message_id, source_group_id, created_at, updated_at, created_by_json, updated_by_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET title = excluded.title, description = excluded.description, status = excluded.status, assignee_profile_ids_json = excluded.assignee_profile_ids_json, labels_json = excluded.labels_json, order_index = excluded.order_index, source_message_id = excluded.source_message_id, source_group_id = excluded.source_group_id, updated_at = excluded.updated_at, updated_by_json = excluded.updated_by_json`).run(task.id, task.projectId, task.title, task.description, task.status, toJson(task.assigneeProfileIds), toJson(task.labels), task.order, task.sourceMessageId ?? null, task.sourceGroupId ?? null, task.createdAt, task.updatedAt, toJson(task.createdBy), task.updatedBy ? toJson(task.updatedBy) : null);
+  }
+
+  private insertTaskDocument(document: TaskDocument): void {
+    this.db.prepare(`INSERT INTO task_documents (id, task_id, kind, body, author_json, created_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, body = excluded.body, author_json = excluded.author_json, created_at = excluded.created_at`).run(document.id, document.taskId, document.kind, document.body, toJson(document.author), document.createdAt);
   }
 }
 
@@ -446,6 +676,59 @@ export function parseTaskDocumentKind(value: unknown): TaskDocumentKind {
 export function parseProfilePresence(value: unknown): ProfilePresence {
   if (value === 'online' || value === 'idle' || value === 'offline' || value === 'blocked') return value;
   throw new Error('Invalid profile status');
+}
+
+function rowToMessage(row: MessageRow): AgoraMessage {
+  return {
+    id: row.id,
+    channel: row.channel,
+    groupId: row.group_id,
+    text: row.text,
+    author: fromJson<Author>(row.author_json),
+    metadata: fromJson<Record<string, unknown>>(row.metadata_json),
+    createdAt: row.created_at,
+    threadId: row.thread_id,
+    replyTo: row.reply_to
+  };
+}
+
+function rowToGroup(row: GroupRow): AgoraGroup {
+  return { id: row.id, name: row.name, memberProfileIds: fromJson<string[]>(row.member_profile_ids_json), createdAt: row.created_at, updatedAt: row.updated_at, createdBy: fromJson<Author>(row.created_by_json) };
+}
+
+function rowToProject(row: ProjectRow): AgoraProject {
+  return { id: row.id, name: row.name, description: row.description, status: parseProjectStatus(row.status), memberProfileIds: fromJson<string[]>(row.member_profile_ids_json), createdAt: row.created_at, updatedAt: row.updated_at, createdBy: fromJson<Author>(row.created_by_json) };
+}
+
+function rowToTask(row: TaskRow): AgoraTask {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    title: row.title,
+    description: row.description,
+    status: parseKanbanStatus(row.status),
+    assigneeProfileIds: fromJson<string[]>(row.assignee_profile_ids_json),
+    labels: fromJson<string[]>(row.labels_json),
+    order: row.order_index,
+    sourceMessageId: row.source_message_id,
+    sourceGroupId: row.source_group_id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    createdBy: fromJson<Author>(row.created_by_json),
+    updatedBy: row.updated_by_json ? fromJson<Author>(row.updated_by_json) : undefined
+  };
+}
+
+function rowToTaskDocument(row: TaskDocumentRow): TaskDocument {
+  return { id: row.id, taskId: row.task_id, kind: parseTaskDocumentKind(row.kind), body: row.body, author: fromJson<Author>(row.author_json), createdAt: row.created_at };
+}
+
+function toJson(value: unknown): string {
+  return JSON.stringify(value);
+}
+
+function fromJson<T>(value: string): T {
+  return JSON.parse(value) as T;
 }
 
 function normalizeGroupName(nameRaw: string): string {
@@ -498,8 +781,8 @@ function normalizeAssignees(profileIds: string[], memberProfileIds: string[]): s
   return assignees;
 }
 
-function nextTaskOrder(tasks: AgoraTask[], projectId: string): number {
-  const orders = tasks.filter((task) => task.projectId === projectId).map((task) => task.order);
+function nextTaskOrder(tasks: AgoraTask[]): number {
+  const orders = tasks.map((task) => task.order);
   return orders.length === 0 ? 0 : Math.max(...orders) + 1;
 }
 

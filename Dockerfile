@@ -1,21 +1,23 @@
-FROM node:22-alpine AS build
+FROM node:22-bookworm-slim AS build
 WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-ARG VITE_AUTH_MODE=keycloak
+ARG VITE_AUTH_MODE=***
 ARG VITE_KEYCLOAK_URL=https://auth.etharlia.com
 ARG VITE_KEYCLOAK_REALM=etharlia
 ARG VITE_KEYCLOAK_CLIENT_ID=hermes-agora
-ENV VITE_AUTH_MODE=$VITE_AUTH_MODE
+ENV VITE_AUTH_MODE=***
 ENV VITE_KEYCLOAK_URL=$VITE_KEYCLOAK_URL
 ENV VITE_KEYCLOAK_REALM=$VITE_KEYCLOAK_REALM
 ENV VITE_KEYCLOAK_CLIENT_ID=$VITE_KEYCLOAK_CLIENT_ID
 RUN npm run build
 
-FROM node:22-alpine
+FROM node:22-bookworm-slim
 WORKDIR /app
 ENV NODE_ENV=production
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ ca-certificates wget && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/dist ./dist

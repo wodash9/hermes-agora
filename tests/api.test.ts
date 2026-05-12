@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createAgoraApp } from '../src/server/app';
 import { loadServerConfig } from '../src/server/config';
-import { JsonMessageStore } from '../src/server/store';
+import { SQLiteMessageStore } from '../src/server/store';
 
 let dir: string;
 let app: Awaited<ReturnType<typeof createAgoraApp>>['app'];
@@ -13,7 +13,7 @@ let app: Awaited<ReturnType<typeof createAgoraApp>>['app'];
 beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), 'agora-api-'));
   const config = loadServerConfig({ HUB_AGENT_TOKEN: 'test-secret', DATA_FILE: join(dir, 'store.json'), CORS_ORIGIN: 'http://localhost:3000' });
-  const store = await JsonMessageStore.open(config.dataFile);
+  const store = await SQLiteMessageStore.open(config.dataFile);
   app = (await createAgoraApp({ config, store })).app;
 });
 
