@@ -220,4 +220,127 @@ describe('agent API', () => {
       .set('X-Hermes-Profile', 'jeeves-ops')
       .expect(403);
   });
+
+  it('creates projects and restricts visibility to project members', async () => {
+    const create = await request(app)
+      .post('/api/v1/projects')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'seldon-ceo')
+      .send({ name: 'Agora Roadmap', description: 'Trabajo de producto', memberProfileIds: ['daneel-cto', 'columbo-qa'] })
+      .expect(201);
+
+    expect(create.body.id).toBe('agora-roadmap');
+    expect(create.body.memberProfileIds).toEqual(['daneel-cto', 'columbo-qa']);
+
+    const memberList = await request(app)
+      .get('/api/v1/projects')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'daneel-cto')
+      .expect(200);
+    expect(memberList.body.projects.map((project: { id: string }) => project.id)).toContain(create.body.id);
+
+    const outsiderList = await request(app)
+      .get('/api/v1/projects')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'jeeves-ops')
+      .expect(200);
+    expect(outsiderList.body.projects.map((project: { id: string }) => project.id)).not.toContain(create.body.id);
+
+    await request(app)
+      .post('/api/v1/projects')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'jeeves-ops')
+      .send({ name: 'Nope', memberProfileIds: ['jeeves-ops'] })
+      .expect(403);
+  });
+
+  it('lets project members create, move, read and document kanban tasks', async () => {
+    const project = await request(app)
+      .post('/api/v1/projects')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'seldon-ceo')
+      .send({ name: 'Kanban QA', memberProfileIds: ['daneel-cto', 'columbo-qa'] })
+      .expect(201);
+
+    const task = await request(app)
+      .post(`/api/v1/projects/${project.body.id}/tasks`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'daneel-cto')
+      .send({ title: 'Implementar tablero', description: 'MVP interactivo', assigneeProfileIds: ['columbo-qa'], labels: ['ui'] })
+      .expect(201);
+
+    expect(task.body.status).toBe('backlog');
+    expect(task.body.assigneeProfileIds).toEqual(['columbo-qa']);
+
+    const moved = await request(app)
+      .patch(`/api/v1/projects/${project.body.id}/tasks/${task.body.id}`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'columbo-qa')
+      .send({ status: 'review' })
+      .expect(200);
+    expect(moved.body.status).toBe('review');
+
+    await request(app)
+      .post(`/api/v1/projects/${project.body.id}/tasks/${task.body.id}/documents`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'columbo-qa')
+      .send({ kind: 'qa', body: 'QA: revisar responsive antes de deploy' })
+      .expect(201);
+
+    const docs = await request(app)
+      .get(`/api/v1/projects/${project.body.id}/tasks/${task.body.id}/documents`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'daneel-cto')
+      .expect(200);
+    expect(docs.body.documents[0].body).toContain('QA');
+
+    await request(app)
+      .patch(`/api/v1/projects/${project.body.id}/tasks/${task.body.id}`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'jeeves-ops')
+      .send({ status: 'done' })
+      .expect(403);
+
+    await request(app)
+      .post(`/api/v1/projects/${project.body.id}/tasks`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'daneel-cto')
+      .send({ title: 'Asignación inválida', assigneeProfileIds: ['jeeves-ops'] })
+      .expect(400);
+  });
+
+  it('deletes projects with their tasks and documents', async () => {
+    const project = await request(app)
+      .post('/api/v1/projects')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'seldon-ceo')
+      .send({ name: 'Temporary Project', memberProfileIds: ['daneel-cto'] })
+      .expect(201);
+
+    const task = await request(app)
+      .post(`/api/v1/projects/${project.body.id}/tasks`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'daneel-cto')
+      .send({ title: 'Tarea temporal' })
+      .expect(201);
+
+    await request(app)
+      .post(`/api/v1/projects/${project.body.id}/tasks/${task.body.id}/documents`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'daneel-cto')
+      .send({ body: 'Documento temporal' })
+      .expect(201);
+
+    await request(app)
+      .delete(`/api/v1/projects/${project.body.id}`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'seldon-ceo')
+      .expect(204);
+
+    await request(app)
+      .get(`/api/v1/projects/${project.body.id}/tasks/${task.body.id}`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'daneel-cto')
+      .expect(404);
+  });
 });

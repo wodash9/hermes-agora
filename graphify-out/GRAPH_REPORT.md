@@ -1,13 +1,18 @@
-# Graph Report - .  (2026-05-05)
+# Graph Report - hermes-agora  (2026-05-12)
 
 ## Corpus Check
-- 39 files · ~18,792 words
+- 41 files · ~24,784 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 160 nodes · 258 edges · 23 communities detected
+- 366 nodes · 774 edges · 18 communities (16 shown, 2 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
+
+## Graph Freshness
+- Built from commit: `a53e0112`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - [[_COMMUNITY_Community 0|Community 0]]
@@ -21,151 +26,84 @@
 - [[_COMMUNITY_Community 8|Community 8]]
 - [[_COMMUNITY_Community 9|Community 9]]
 - [[_COMMUNITY_Community 10|Community 10]]
-- [[_COMMUNITY_Community 11|Community 11]]
 - [[_COMMUNITY_Community 12|Community 12]]
-- [[_COMMUNITY_Community 13|Community 13]]
-- [[_COMMUNITY_Community 14|Community 14]]
-- [[_COMMUNITY_Community 15|Community 15]]
-- [[_COMMUNITY_Community 16|Community 16]]
-- [[_COMMUNITY_Community 17|Community 17]]
-- [[_COMMUNITY_Community 18|Community 18]]
-- [[_COMMUNITY_Community 19|Community 19]]
-- [[_COMMUNITY_Community 20|Community 20]]
-- [[_COMMUNITY_Community 21|Community 21]]
-- [[_COMMUNITY_Community 22|Community 22]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `JsonMessageStore` - 15 edges
-2. `buildAuthHeaders()` - 9 edges
-3. `HttpAgoraClient` - 8 edges
-4. `normalizeGroupId()` - 8 edges
-5. `AgoraTaskListener` - 6 edges
-6. `FakeAgoraClient` - 6 edges
-7. `buildJsonHeaders()` - 6 edges
-8. `FileListenerStateStore` - 5 edges
-9. `isActionableTaskForProfile()` - 5 edges
-10. `readListenerConfig()` - 5 edges
+1. `JsonMessageStore` - 31 edges
+2. `JsonMessageStore` - 15 edges
+3. `buildAuthHeaders()` - 14 edges
+4. `buildJsonHeaders()` - 11 edges
+5. `normalizeGroupId()` - 10 edges
+6. `normalizeProjectId()` - 9 edges
+7. `Hermes Agora` - 9 edges
+8. `buildAuthHeaders()` - 9 edges
+9. `HttpAgoraClient` - 8 edges
+10. `normalizeGroupId()` - 8 edges
 
 ## Surprising Connections (you probably didn't know these)
 - None detected - all connections are within the same source files.
 
-## Communities
+## Communities (18 total, 2 thin omitted)
 
 ### Community 0 - "Community 0"
-Cohesion: 0.21
-Nodes (8): JsonMessageStore, normalizeChannel(), normalizeGroupId(), normalizeGroupName(), normalizeMemberProfileIds(), parseProfilePresence(), slugifyGroupName(), uniqueGroupId()
+Cohesion: 0.06
+Nodes (50): CreateGroupInput, CreateMessageInput, CreateProjectInput, CreateTaskDocumentInput, CreateTaskInput, JsonMessageStore, ListMessagesInput, nextTaskOrder() (+42 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.18
-Nodes (13): buildGroupMessageMetadata(), canManageGroups(), createAgoraApp(), groupAccessStatus(), isGroupMember(), parseMemberProfileIds(), requireGroupAccess(), loadServerConfig() (+5 more)
+Cohesion: 0.05
+Nodes (48): buildAuthHeaders(), buildJsonHeaders(), buildSocketAuth(), createGroup(), deleteGroup(), fetchGroupMessages(), fetchGroups(), fetchIdentity() (+40 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.26
-Nodes (14): buildAuthHeaders(), buildJsonHeaders(), buildSocketAuth(), createGroup(), deleteGroup(), fetchGroupMessages(), fetchGroups(), fetchIdentity() (+6 more)
+Cohesion: 0.11
+Nodes (24): AgoraListenerClient, AgoraTaskListener, AgoraTaskListenerOptions, blockedText(), BootstrapMode, buildHermesPrompt(), extractTaskId(), isActionableTaskForProfile() (+16 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.32
-Nodes (8): AgoraTaskListener, blockedText(), buildHermesPrompt(), extractTaskId(), isActionableTaskForProfile(), isListenerResult(), readTargetProfileIds(), sanitizeAgentOutput()
+Cohesion: 0.11
+Nodes (24): loadServerConfig(), parseProfiles(), AgoraEvents, defaultProfiles, loadServerConfig(), parseProfiles(), ServerConfig, attachAgoraSocket() (+16 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.23
-Nodes (3): HttpAgoraClient, safeErrorDetail(), redactSensitive()
+Cohesion: 0.16
+Nodes (24): buildGroupMessageMetadata(), canManageGroups(), createAgoraApp(), groupAccessStatus(), isGroupMember(), parseMemberProfileIds(), requireGroupAccess(), buildGroupMessageMetadata() (+16 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.38
-Nodes (10): authenticateAgentToken(), authenticateToken(), bearerToken(), canAccessChannel(), hasRequiredAudience(), hasRole(), requireIdentity(), requireScope() (+2 more)
+Cohesion: 0.19
+Nodes (22): authenticateAgentToken(), authenticateToken(), bearerToken(), canAccessChannel(), hasRequiredAudience(), hasRole(), requireIdentity(), requireScope() (+14 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.33
-Nodes (7): createHermesCliRunner(), runProcess(), stripCliNoise(), clampNumber(), main(), readArgs(), readListenerConfig()
+Cohesion: 0.17
+Nodes (11): createHermesCliRunner(), runProcess(), stripCliNoise(), clampNumber(), main(), readArgs(), readListenerConfig(), FileListenerStateStore (+3 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.18
-Nodes (0): 
+Cohesion: 0.19
+Nodes (7): JsonMessageStore, normalizeChannel(), normalizeGroupId(), normalizeGroupName(), normalizeMemberProfileIds(), slugifyGroupName(), uniqueGroupId()
 
 ### Community 8 - "Community 8"
-Cohesion: 0.36
-Nodes (4): FileListenerStateStore, getGroupState(), normalizeState(), rememberProcessed()
-
-### Community 9 - "Community 9"
-Cohesion: 0.22
-Nodes (1): FakeAgoraClient
-
-### Community 10 - "Community 10"
-Cohesion: 0.4
-Nodes (0): 
-
-### Community 11 - "Community 11"
-Cohesion: 0.4
-Nodes (0): 
+Cohesion: 0.11
+Nodes (18): Agora listener, API de agentes, code:bash (npm install), code:bash (npm run dev:web), code:bash (npm test), code:bash (export HERMES_AGORA_URL=https://agora.etharlia.com), code:json ({), code:bash (HERMES_AGORA_URL=https://agora.etharlia.com \) (+10 more)
 
 ### Community 12 - "Community 12"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 13 - "Community 13"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 14 - "Community 14"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 15 - "Community 15"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 16 - "Community 16"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 17 - "Community 17"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 18 - "Community 18"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 19 - "Community 19"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 20 - "Community 20"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 21 - "Community 21"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 22 - "Community 22"
-Cohesion: 1.0
-Nodes (0): 
+Cohesion: 0.5
+Nodes (3): Acceptance criteria, Hermes Agora V0 Implementation Plan, MVP boundary
 
 ## Knowledge Gaps
-- **Thin community `Community 12`** (2 nodes): `connect()`, `socket.test.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 13`** (2 nodes): `scrollMessagesToLatest()`, `scroll.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 14`** (1 nodes): `vite.config.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 15`** (1 nodes): `index.js`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 16`** (1 nodes): `types.js`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 17`** (1 nodes): `store.test.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 18`** (1 nodes): `config.test.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 19`** (1 nodes): `api.test.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 20`** (1 nodes): `client-ui.test.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 21`** (1 nodes): `main.tsx`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 22`** (1 nodes): `types.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **50 isolated node(s):** `file`, `statuses`, `author`, `config`, `jeeves` (+45 more)
+  These have ≤1 connection - possible missing edges or undocumented components.
+- **2 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
-_Not enough signal to generate questions. This usually means the corpus has no AMBIGUOUS edges, no bridge nodes, no INFERRED relationships, and all communities are tightly cohesive. Add more files or run with --mode deep to extract richer edges._
+_Questions this graph is uniquely positioned to answer:_
+
+- **Why does `AgoraMessage` connect `Community 0` to `Community 1`, `Community 2`, `Community 4`?**
+  _High betweenness centrality (0.081) - this node is a cross-community bridge._
+- **Why does `AgoraGroup` connect `Community 0` to `Community 1`, `Community 2`, `Community 4`?**
+  _High betweenness centrality (0.081) - this node is a cross-community bridge._
+- **Why does `JsonMessageStore` connect `Community 0` to `Community 3`, `Community 4`?**
+  _High betweenness centrality (0.078) - this node is a cross-community bridge._
+- **What connects `file`, `statuses`, `author` to the rest of the system?**
+  _50 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `Community 0` be split into smaller, more focused modules?**
+  _Cohesion score 0.06 - nodes in this community are weakly interconnected._
+- **Should `Community 1` be split into smaller, more focused modules?**
+  _Cohesion score 0.05 - nodes in this community are weakly interconnected._
+- **Should `Community 2` be split into smaller, more focused modules?**
+  _Cohesion score 0.11 - nodes in this community are weakly interconnected._

@@ -27,7 +27,8 @@ export function attachAgoraSocket(httpServer: HttpServer, config: ServerConfig, 
     const channels = identity?.scopes?.includes('admin') ? ['general', 'strategy', 'qa'] : identity?.channels ?? ['general'];
     for (const channel of channels) socket.join(channel);
     for (const group of visibleGroupsFor(identity, store)) socket.join(groupRoom(group.id));
-    socket.emit('room:joined', { channels, groups: visibleGroupsFor(identity, store).map((group) => group.id) });
+    for (const project of visibleProjectsFor(identity, store)) socket.join(projectRoom(project.id));
+    socket.emit('room:joined', { channels, groups: visibleGroupsFor(identity, store).map((group) => group.id), projects: visibleProjectsFor(identity, store).map((project) => project.id) });
   });
 
   events.on('group:updated', (group) => {
@@ -43,6 +44,27 @@ export function attachAgoraSocket(httpServer: HttpServer, config: ServerConfig, 
     io.to(room).emit('message:new', message);
   });
 
+  events.on('project:updated', (project) => {
+    for (const socket of io.sockets.sockets.values()) {
+      const identity = socket.data.identity as Identity | undefined;
+      if (identity && canSeeProject(identity, project.memberProfileIds)) socket.join(projectRoom(project.id));
+      else socket.leave(projectRoom(project.id));
+    }
+    io.to(projectRoom(project.id)).emit('project:updated', project);
+  });
+
+  events.on('project:deleted', (projectId) => {
+    io.to(projectRoom(projectId)).emit('project:deleted', { projectId });
+  });
+
+  events.on('task:updated', (task) => {
+    io.to(projectRoom(task.projectId)).emit('task:updated', task);
+  });
+
+  events.on('task:documented', (payload) => {
+    io.to(projectRoom(payload.task.projectId)).emit('task:documented', payload);
+  });
+
   return io;
 }
 
@@ -53,10 +75,29 @@ function visibleGroupsFor(identity: Identity | undefined, store: JsonMessageStor
   return groups.filter((group) => group.memberProfileIds.includes(identity.profileId));
 }
 
+function visibleProjectsFor(identity: Identity | undefined, store: JsonMessageStore) {
+  if (!identity || !hasProjectReadScope(identity)) return [];
+  const projects = store.listProjects().projects;
+  if (identity.type === 'human' || identity.scopes.includes('admin')) return projects;
+  return projects.filter((project) => project.memberProfileIds.includes(identity.profileId));
+}
+
 function canSeeGroup(identity: Identity, memberProfileIds: string[]): boolean {
   return identity.type === 'human' || identity.scopes.includes('admin') || memberProfileIds.includes(identity.profileId);
 }
 
+function canSeeProject(identity: Identity, memberProfileIds: string[]): boolean {
+  return hasProjectReadScope(identity) && (identity.type === 'human' || identity.scopes.includes('admin') || memberProfileIds.includes(identity.profileId));
+}
+
+function hasProjectReadScope(identity: Identity): boolean {
+  return identity.type === 'human' || identity.scopes.includes('admin') || identity.scopes.includes('projects:read');
+}
+
 function groupRoom(groupId: string): string {
   return `group:${groupId}`;
+}
+
+function projectRoom(projectId: string): string {
+  return `project:${projectId}`;
 }

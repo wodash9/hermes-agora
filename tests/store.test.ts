@@ -41,4 +41,20 @@ describe('JsonMessageStore', () => {
     expect(statuses.profiles).toHaveLength(20);
     expect(statuses.profiles.every((profile) => profile.status === 'idle')).toBe(true);
   });
+
+  it('persists projects, kanban tasks and task documents across reopen', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'agora-'));
+    const file = join(dir, 'store.json');
+    const store = await JsonMessageStore.open(file);
+    const author = { type: 'agent' as const, profileId: 'seldon-ceo', displayName: 'Seldon' };
+    const project = await store.createProject({ name: 'Persistent Project', description: 'Persistencia', memberProfileIds: ['daneel-cto'], createdBy: author });
+    const task = await store.createProjectTask({ projectId: project.id, title: 'Persistir tarea', assigneeProfileIds: ['daneel-cto'], createdBy: author });
+    await store.updateProjectTask(project.id, task.id, { status: 'done', updatedBy: author });
+    await store.appendTaskDocument(project.id, task.id, { kind: 'result', body: 'Hecho', author });
+
+    const reopened = await JsonMessageStore.open(file);
+    expect(reopened.listProjects().projects[0].name).toBe('Persistent Project');
+    expect(reopened.listProjectTasks(project.id).tasks[0].status).toBe('done');
+    expect(reopened.listTaskDocuments(project.id, task.id).documents[0].body).toBe('Hecho');
+  });
 });

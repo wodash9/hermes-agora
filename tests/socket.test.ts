@@ -18,7 +18,13 @@ let baseUrl: string;
 
 beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), 'agora-socket-'));
-  const config = loadServerConfig({ HUB_AGENT_TOKEN: 'test-secret', DATA_FILE: join(dir, 'store.json'), CORS_ORIGIN: 'http://localhost:3000' });
+  const profiles = {
+    'seldon-ceo': { displayName: 'Seldon', scopes: ['messages:read', 'messages:write', 'admin'], channels: ['general', 'strategy', 'qa'] },
+    'jeeves-ops': { displayName: 'Jeeves', scopes: ['messages:read', 'messages:write', 'projects:read', 'projects:write'], channels: ['general', 'ops'] },
+    'columbo-qa': { displayName: 'Columbo', scopes: ['messages:read', 'messages:write', 'projects:read', 'projects:write'], channels: ['general', 'qa'] },
+    'limited-agent': { displayName: 'Limited', scopes: ['messages:read', 'messages:write'], channels: ['general'] }
+  };
+  const config = loadServerConfig({ HUB_AGENT_TOKEN: 'test-secret', DATA_FILE: join(dir, 'store.json'), CORS_ORIGIN: 'http://localhost:3000', HERMES_AGORA_PROFILES_JSON: JSON.stringify(profiles) });
   const store = await JsonMessageStore.open(config.dataFile);
   const created = await createAgoraApp({ config, store });
   app = created.app;
@@ -79,6 +85,40 @@ describe('Socket.IO auth', () => {
     expect(memberCount).toBe(1);
     expect(outsiderCount).toBe(0);
     member.close();
+    outsider.close();
+  });
+
+  it('emits project task updates only to members with projects:read scope', async () => {
+    const scopedMember = await connect({ token: 'test-secret', profileId: 'jeeves-ops' });
+    const limitedMember = await connect({ token: 'test-secret', profileId: 'limited-agent' });
+    const outsider = await connect({ token: 'test-secret', profileId: 'columbo-qa' });
+    const project = await request(app)
+      .post('/api/v1/projects')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'seldon-ceo')
+      .send({ name: 'Socket Project', memberProfileIds: ['jeeves-ops', 'limited-agent'] })
+      .expect(201);
+
+    let scopedCount = 0;
+    let limitedCount = 0;
+    let outsiderCount = 0;
+    scopedMember.on('task:updated', () => { scopedCount += 1; });
+    limitedMember.on('task:updated', () => { limitedCount += 1; });
+    outsider.on('task:updated', () => { outsiderCount += 1; });
+
+    await request(app)
+      .post(`/api/v1/projects/${project.body.id}/tasks`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'jeeves-ops')
+      .send({ title: 'Socket-visible task' })
+      .expect(201);
+
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(scopedCount).toBe(1);
+    expect(limitedCount).toBe(0);
+    expect(outsiderCount).toBe(0);
+    scopedMember.close();
+    limitedMember.close();
     outsider.close();
   });
 });

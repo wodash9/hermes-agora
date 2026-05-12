@@ -15,18 +15,18 @@ export interface ServerConfig {
 
 const defaultProfiles: Record<string, AgentProfileConfig> = {
   'seldon-ceo': { displayName: 'Seldon', scopes: ['messages:read', 'messages:write', 'admin'], channels: ['general', 'strategy', 'qa'] },
-  'jeeves-ops': { displayName: 'Jeeves', scopes: ['messages:read', 'messages:write'], channels: ['general', 'ops'] },
-  'daneel-cto': { displayName: 'Daneel', scopes: ['messages:read', 'messages:write'], channels: ['general', 'tech'] },
-  'valentine-product': { displayName: 'Valentine', scopes: ['messages:read', 'messages:write'], channels: ['general', 'product'] },
-  'lyra-research': { displayName: 'Lyra', scopes: ['messages:read', 'messages:write'], channels: ['general', 'research'] },
-  'kvothe-marketing': { displayName: 'Kvothe', scopes: ['messages:read', 'messages:write'], channels: ['general', 'marketing'] },
-  'locke-sales': { displayName: 'Locke', scopes: ['messages:read', 'messages:write'], channels: ['general', 'sales'] },
-  'columbo-qa': { displayName: 'Columbo', scopes: ['messages:read', 'messages:write'], channels: ['general', 'qa'] },
-  'lipwig-finance': { displayName: 'Lipwig', scopes: ['messages:read', 'messages:write'], channels: ['general', 'finance'] },
-  'cordelia-success': { displayName: 'Cordelia', scopes: ['messages:read', 'messages:write'], channels: ['general', 'customer-success'] },
-  'portia-legal': { displayName: 'Portia', scopes: ['messages:read', 'messages:write'], channels: ['general', 'legal'] },
-  'atticus-suplan-legal': { displayName: 'Atticus', scopes: ['messages:read', 'messages:write'], channels: ['general', 'suplan', 'legal'] },
-  'iris-packaging-design': { displayName: 'Iris', scopes: ['messages:read', 'messages:write'], channels: ['general', 'suplan', 'design'] }
+  'jeeves-ops': { displayName: 'Jeeves', scopes: ['messages:read', 'messages:write', 'projects:read', 'projects:write'], channels: ['general', 'ops'] },
+  'daneel-cto': { displayName: 'Daneel', scopes: ['messages:read', 'messages:write', 'projects:read', 'projects:write'], channels: ['general', 'tech'] },
+  'valentine-product': { displayName: 'Valentine', scopes: ['messages:read', 'messages:write', 'projects:read', 'projects:write'], channels: ['general', 'product'] },
+  'lyra-research': { displayName: 'Lyra', scopes: ['messages:read', 'messages:write', 'projects:read', 'projects:write'], channels: ['general', 'research'] },
+  'kvothe-marketing': { displayName: 'Kvothe', scopes: ['messages:read', 'messages:write', 'projects:read', 'projects:write'], channels: ['general', 'marketing'] },
+  'locke-sales': { displayName: 'Locke', scopes: ['messages:read', 'messages:write', 'projects:read', 'projects:write'], channels: ['general', 'sales'] },
+  'columbo-qa': { displayName: 'Columbo', scopes: ['messages:read', 'messages:write', 'projects:read', 'projects:write'], channels: ['general', 'qa'] },
+  'lipwig-finance': { displayName: 'Lipwig', scopes: ['messages:read', 'messages:write', 'projects:read', 'projects:write'], channels: ['general', 'finance'] },
+  'cordelia-success': { displayName: 'Cordelia', scopes: ['messages:read', 'messages:write', 'projects:read', 'projects:write'], channels: ['general', 'customer-success'] },
+  'portia-legal': { displayName: 'Portia', scopes: ['messages:read', 'messages:write', 'projects:read', 'projects:write'], channels: ['general', 'legal'] },
+  'atticus-suplan-legal': { displayName: 'Atticus', scopes: ['messages:read', 'messages:write', 'projects:read', 'projects:write'], channels: ['general', 'suplan', 'legal'] },
+  'iris-packaging-design': { displayName: 'Iris', scopes: ['messages:read', 'messages:write', 'projects:read', 'projects:write'], channels: ['general', 'suplan', 'design'] }
 };
 
 function parseProfiles(value: string | undefined): Record<string, AgentProfileConfig> {

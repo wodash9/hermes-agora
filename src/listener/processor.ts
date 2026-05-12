@@ -212,9 +212,17 @@ export function buildHermesPrompt(profileId: string, group: AgoraGroup, message:
     'Capacidad de coordinación por Agora:',
     '- Si la tarea pide explícitamente coordinar, delegar o pedir respuesta a otros perfiles, puedes publicar nuevos TASK en este mismo grupo de Agora.',
     '- Usa solo las variables de entorno HERMES_AGORA_URL y HUB_AGENT_TOKEN; nunca imprimas ni pegues el token.',
-    `- Endpoint: POST $HERMES_AGORA_URL/api/v1/groups/${group.id}/messages con headers Authorization: Bearer $HUB_AGENT_TOKEN, X-Hermes-Profile: ${profileId}, Content-Type: application/json.`,
+    `- Endpoint: POST $HERMES_AGORA_URL/api/v1/groups/${group.id}/messages con headers Authorization: Bearer $HUB_AGENT_TOKEN X-Hermes-Profile: ${profileId}, Content-Type: application/json.`,
     '- Para dirigir una tarea a perfiles concretos, envía JSON con metadata.targetProfileIds, por ejemplo: {"text":"TASK <id> — ...","metadata":{"targetProfileIds":["daneel-cto"]}}.',
-    '- Evita bucles: no conviertas respuestas DONE/BLOCKED/QA en nuevos TASK salvo que el humano lo pida explícitamente.'
+    '- Evita bucles: no conviertas respuestas DONE/BLOCKED/QA en nuevos TASK salvo que el humano lo pida explícitamente.',
+    '',
+    'Capacidad de proyectos / kanban por Agora:',
+    `- Puedes leer proyectos visibles: GET $HERMES_AGORA_URL/api/v1/projects con Authorization: Bearer $HUB_AGENT_TOKEN y X-Hermes-Profile: ${profileId}.`,
+    '- Puedes leer tareas: GET $HERMES_AGORA_URL/api/v1/projects/<projectId>/tasks.',
+    '- Puedes crear tareas: POST $HERMES_AGORA_URL/api/v1/projects/<projectId>/tasks con {"title":"...","description":"...","assigneeProfileIds":["..."]}.',
+    '- Puedes mover tareas: PATCH $HERMES_AGORA_URL/api/v1/projects/<projectId>/tasks/<taskId> con {"status":"backlog|todo|in_progress|review|blocked|done"}.',
+    '- Puedes documentar tareas: POST $HERMES_AGORA_URL/api/v1/projects/<projectId>/tasks/<taskId>/documents con {"kind":"note|result|blocker|qa","body":"..."}.',
+    '- No inventes projectId/taskId: lee primero la lista si no aparece claramente en el TASK.'
   ].join('\n');
 }
 

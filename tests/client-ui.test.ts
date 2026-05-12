@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ACTION_OPTIONS, DIRECTED_TARGET_ALL, applyComposerAction, buildRecipientOptions, buildTargetMetadata, toggleMemberSelection } from '../src/client/uiState';
-import { buildAuthHeaders, buildSocketAuth, postGroupMessage } from '../src/client/api';
+import { appendTaskDocument, buildAuthHeaders, buildSocketAuth, createProject, createProjectTask, deleteProject, postGroupMessage, updateProjectTask } from '../src/client/api';
 import { scrollMessagesToLatest } from '../src/client/scroll';
 
 afterEach(() => vi.restoreAllMocks());
@@ -58,6 +58,22 @@ describe('client UI helpers', () => {
     }));
   });
 
+  it('serializes project and task kanban API calls for agents and operators', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true, json: async () => ({ id: 'ok' }) } as Response);
+
+    await createProject('change-me-dev-token', 'Agora', 'Kanban interno', ['daneel-cto']);
+    await createProjectTask('change-me-dev-token', 'agora', { title: 'Crear tablero', status: 'backlog', assigneeProfileIds: ['daneel-cto'] });
+    await updateProjectTask('change-me-dev-token', 'agora', 'task_1', { status: 'review' });
+    await appendTaskDocument('change-me-dev-token', 'agora', 'task_1', 'QA listo', 'qa');
+    await deleteProject('change-me-dev-token', 'agora');
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/projects', expect.objectContaining({ method: 'POST', body: JSON.stringify({ name: 'Agora', description: 'Kanban interno', memberProfileIds: ['daneel-cto'] }) }));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/projects/agora/tasks', expect.objectContaining({ method: 'POST', body: JSON.stringify({ title: 'Crear tablero', status: 'backlog', assigneeProfileIds: ['daneel-cto'] }) }));
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/v1/projects/agora/tasks/task_1', expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'review' }) }));
+    expect(fetchMock).toHaveBeenNthCalledWith(4, '/api/v1/projects/agora/tasks/task_1/documents', expect.objectContaining({ method: 'POST', body: JSON.stringify({ body: 'QA listo', kind: 'qa' }) }));
+    expect(fetchMock).toHaveBeenNthCalledWith(5, '/api/v1/projects/agora', expect.objectContaining({ method: 'DELETE' }));
+  });
+
   it('adds mock profile identity to REST and socket auth only for the local mock token', () => {
     expect(buildAuthHeaders('change-me-dev-token')).toMatchObject({ Authorization: 'Bearer change-me-dev-token', 'X-Hermes-Profile': 'seldon-ceo' });
     expect(buildSocketAuth('change-me-dev-token')).toEqual({ token: 'change-me-dev-token', profileId: 'seldon-ceo' });
@@ -100,20 +116,22 @@ describe('mobile-responsive Agora layout CSS', () => {
     expect(css).toContain('html, body, #root { min-height: 100%; height: 100%; }');
     expect(css).toContain('body { margin: 0; min-height: 100vh; height: 100vh; overflow: hidden;');
     expect(css).toContain('.shell { height: 100vh; max-height: 100vh; overflow: hidden;');
-    expect(css).toContain('.chat, .monitor { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-height: 0; overflow: hidden;');
+    expect(css).toContain('.chat, .monitor, .projects-screen { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; overflow: hidden;');
+    expect(css).toContain('.chat { grid-template-rows: auto minmax(0, 1fr) auto;');
     expect(css).toContain('.messages { min-height: 0;');
     expect(css).toContain('.composer { position: sticky; bottom: 0;');
     expect(css).toContain('.shell { height: 100dvh; max-height: 100dvh;');
   });
 
-  it('uses mobile chat-app patterns: horizontal channel rail, bubbles and compact send control', () => {
+  it('uses sober mobile operational patterns: horizontal channel rail, log cards and compact send control', () => {
     const appSource = readFileSync(join(process.cwd(), 'src/client/App.tsx'), 'utf8');
     expect(css).toContain('.sidebar { flex-direction: row; align-items: center; overflow-x: auto;');
     expect(css).toContain('.sidebar > .channel, .group-list { display: none; }');
-    expect(css).toContain('.message.human { align-self: flex-end;');
-    expect(css).toContain('.message.agent { align-self: flex-start;');
+    expect(css).toContain('.message { width: 100%; max-width: 100%;');
+    expect(css).toContain('.message.human { border-left-color: var(--ok); background: var(--panel);');
+    expect(css).toContain('.message.agent { border-left-color: var(--accent);');
     expect(css).toContain('.composer { grid-template-columns: minmax(72px, 82px) minmax(0, 1fr) 44px;');
-    expect(appSource).toContain('<span className="send-icon" aria-hidden="true">➤</span>');
+    expect(appSource).toContain('<span className="send-icon" aria-hidden="true">↵</span>');
   });
 
   it('keeps the active mobile channel visible inside the horizontal rail', () => {

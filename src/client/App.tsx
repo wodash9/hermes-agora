@@ -1,13 +1,22 @@
 import { FormEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
-import type { AgoraGroup, AgoraMessage, Identity, ProfileStatus } from '../shared/types';
+import type { AgoraGroup, AgoraMessage, AgoraProject, AgoraTask, Identity, KanbanStatus, ProfileStatus, TaskDocument } from '../shared/types';
 import { createClientAuthConfig, initKeycloak, isMockAllowed } from './auth';
-import { createGroup, deleteGroup, fetchGroupMessages, fetchGroups, fetchIdentity, fetchMessages, fetchProfileStatuses, postGroupMessage, postMessage, updateGroup, buildSocketAuth } from './api';
+import { appendTaskDocument, createGroup, createProject, createProjectTask, deleteGroup, deleteProject, fetchGroupMessages, fetchGroups, fetchIdentity, fetchMessages, fetchProfileStatuses, fetchProjectTasks, fetchProjects, fetchTaskDocuments, postGroupMessage, postMessage, updateGroup, updateProject, updateProjectTask, buildSocketAuth } from './api';
 import { ACTION_OPTIONS, DIRECTED_TARGET_ALL, applyComposerAction, buildRecipientOptions, buildTargetMetadata, toggleMemberSelection, type ComposerAction } from './uiState';
 import { scrollMessagesToLatest } from './scroll';
 import './styles.css';
 
-type View = 'chat' | 'monitor' | 'group';
+type View = 'chat' | 'monitor' | 'group' | 'projects';
+
+const KANBAN_COLUMNS: Array<{ status: KanbanStatus; label: string }> = [
+  { status: 'backlog', label: 'Backlog' },
+  { status: 'todo', label: 'To do' },
+  { status: 'in_progress', label: 'En curso' },
+  { status: 'review', label: 'Revisión' },
+  { status: 'blocked', label: 'Bloqueado' },
+  { status: 'done', label: 'Hecho' }
+];
 
 export function App() {
   const authConfig = useMemo(() => createClientAuthConfig(import.meta.env), []);
@@ -18,8 +27,12 @@ export function App() {
   const [groupMessages, setGroupMessages] = useState<Record<string, AgoraMessage[]>>({});
   const [profiles, setProfiles] = useState<ProfileStatus[]>([]);
   const [groups, setGroups] = useState<AgoraGroup[]>([]);
+  const [projects, setProjects] = useState<AgoraProject[]>([]);
+  const [projectTasks, setProjectTasks] = useState<Record<string, AgoraTask[]>>({});
+  const [taskDocuments, setTaskDocuments] = useState<Record<string, TaskDocument[]>>({});
   const [activeView, setActiveView] = useState<View>('chat');
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [composerAction, setComposerAction] = useState<ComposerAction>('NONE');
   const [composerTargetProfileId, setComposerTargetProfileId] = useState(DIRECTED_TARGET_ALL);
@@ -34,7 +47,7 @@ export function App() {
         if (authConfig.mode === 'mock') {
           if (!isMockAllowed()) throw new Error('Mock auth is local-only');
           setToken('change-me-dev-token');
-          setIdentity({ type: 'agent', profileId: 'seldon-ceo', displayName: 'Seldon', scopes: ['messages:read', 'messages:write', 'admin'], channels: ['general'] });
+          setIdentity({ type: 'agent', profileId: 'seldon-ceo', displayName: 'Seldon', scopes: ['messages:read', 'messages:write', 'projects:read', 'projects:write', 'admin'], channels: ['general'] });
           setIsLoading(false);
           return;
         }
@@ -58,12 +71,20 @@ export function App() {
     let active = true;
     async function load() {
       try {
-        const [me, history, statusResponse, groupResponse] = await Promise.all([fetchIdentity(token!), fetchMessages(token!), fetchProfileStatuses(token!), fetchGroups(token!)]);
+        const [me, history, statusResponse, groupResponse, projectResponse] = await Promise.all([
+          fetchIdentity(token!),
+          fetchMessages(token!),
+          fetchProfileStatuses(token!),
+          fetchGroups(token!),
+          fetchProjects(token!).catch(() => ({ projects: [], generatedAt: new Date().toISOString() }))
+        ]);
         if (!active) return;
         setIdentity(me);
         setMessages(history.messages);
         setProfiles(statusResponse.profiles);
         setGroups(groupResponse.groups);
+        setProjects(projectResponse.projects);
+        setActiveProjectId((current) => current ?? projectResponse.projects[0]?.id ?? null);
         setIsLoading(false);
       } catch (err) {
         setError((err as Error).message);
@@ -73,7 +94,8 @@ export function App() {
     load();
     const refreshStatuses = () => void fetchProfileStatuses(token).then((response) => active && setProfiles(response.profiles)).catch(() => undefined);
     const refreshGroups = () => void fetchGroups(token).then((response) => active && setGroups(response.groups)).catch(() => undefined);
-    const interval = window.setInterval(() => { refreshStatuses(); refreshGroups(); }, 15_000);
+    const refreshProjects = () => void fetchProjects(token).then((response) => active && setProjects(response.projects)).catch(() => undefined);
+    const interval = window.setInterval(() => { refreshStatuses(); refreshGroups(); refreshProjects(); }, 15_000);
     const socket = io({ auth: buildSocketAuth(token) });
     socket.on('message:new', (message: AgoraMessage) => {
       if (message.groupId) {
@@ -83,6 +105,26 @@ export function App() {
       }
       refreshStatuses();
     });
+    socket.on('project:updated', (project: AgoraProject) => {
+      setProjects((current) => upsertById(current, project));
+      setActiveProjectId((current) => current ?? project.id);
+    });
+    socket.on('project:deleted', ({ projectId }: { projectId: string }) => {
+      setProjects((current) => current.filter((project) => project.id !== projectId));
+      setProjectTasks((current) => {
+        const next = { ...current };
+        delete next[projectId];
+        return next;
+      });
+      setActiveProjectId((current) => current === projectId ? null : current);
+    });
+    socket.on('task:updated', (task: AgoraTask) => {
+      setProjectTasks((current) => ({ ...current, [task.projectId]: upsertById(current[task.projectId] ?? [], task) }));
+    });
+    socket.on('task:documented', ({ task, document }: { task: AgoraTask; document: TaskDocument }) => {
+      setProjectTasks((current) => ({ ...current, [task.projectId]: upsertById(current[task.projectId] ?? [], task) }));
+      setTaskDocuments((current) => ({ ...current, [task.id]: appendUniqueDocument(current[task.id] ?? [], document) }));
+    });
     return () => { active = false; window.clearInterval(interval); socket.close(); };
   }, [token]);
 
@@ -90,6 +132,84 @@ export function App() {
     if (!token || !activeGroupId || groupMessages[activeGroupId]) return;
     void fetchGroupMessages(token, activeGroupId).then((history) => setGroupMessages((current) => ({ ...current, [activeGroupId]: history.messages }))).catch((err) => setError((err as Error).message));
   }, [token, activeGroupId, groupMessages]);
+
+  useEffect(() => {
+    if (!token || !activeProjectId || projectTasks[activeProjectId]) return;
+    void fetchProjectTasks(token, activeProjectId).then((response) => setProjectTasks((current) => ({ ...current, [activeProjectId]: response.tasks }))).catch((err) => setError((err as Error).message));
+  }, [token, activeProjectId, projectTasks]);
+
+  async function handleProjectRefresh(projectId: string) {
+    if (!token) return;
+    const response = await fetchProjectTasks(token, projectId);
+    setProjectTasks((current) => ({ ...current, [projectId]: response.tasks }));
+  }
+
+  async function handleSaveProject(name: string, description: string, memberProfileIds: string[], projectId?: string) {
+    if (!token) return;
+    try {
+      const project = projectId ? await updateProject(token, projectId, name, description, memberProfileIds) : await createProject(token, name, description, memberProfileIds);
+      const projectResponse = await fetchProjects(token);
+      setProjects(projectResponse.projects);
+      setActiveProjectId(project.id);
+      setActiveView('projects');
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  async function handleDeleteProject(projectId: string) {
+    if (!token) return;
+    try {
+      await deleteProject(token, projectId);
+      const projectResponse = await fetchProjects(token);
+      setProjects(projectResponse.projects);
+      setProjectTasks((current) => {
+        const next = { ...current };
+        delete next[projectId];
+        return next;
+      });
+      setActiveProjectId(projectResponse.projects[0]?.id ?? null);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  async function handleCreateTask(projectId: string, title: string, description: string, assigneeProfileIds: string[]) {
+    if (!token) return;
+    try {
+      const task = await createProjectTask(token, projectId, { title, description, assigneeProfileIds, status: 'backlog' });
+      setProjectTasks((current) => ({ ...current, [projectId]: upsertById(current[projectId] ?? [], task) }));
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  async function handleMoveTask(projectId: string, task: AgoraTask, status: KanbanStatus) {
+    if (!token) return;
+    try {
+      const updated = await updateProjectTask(token, projectId, task.id, { status });
+      setProjectTasks((current) => ({ ...current, [projectId]: upsertById(current[projectId] ?? [], updated) }));
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  async function handleAppendTaskDocument(projectId: string, task: AgoraTask, body: string) {
+    if (!token) return;
+    try {
+      const document = await appendTaskDocument(token, projectId, task.id, body, task.status === 'blocked' ? 'blocker' : task.status === 'review' ? 'qa' : task.status === 'done' ? 'result' : 'note');
+      setTaskDocuments((current) => ({ ...current, [task.id]: appendUniqueDocument(current[task.id] ?? [], document) }));
+      await handleProjectRefresh(projectId);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  async function handleLoadTaskDocuments(projectId: string, taskId: string) {
+    if (!token || taskDocuments[taskId]) return;
+    const response = await fetchTaskDocuments(token, projectId, taskId);
+    setTaskDocuments((current) => ({ ...current, [taskId]: response.documents }));
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -140,17 +260,27 @@ export function App() {
   }
 
   const activeGroup = groups.find((group) => group.id === activeGroupId) ?? null;
+  const activeProject = projects.find((project) => project.id === activeProjectId) ?? null;
+  const activeProjectTasks = activeProjectId ? projectTasks[activeProjectId] ?? [] : [];
   const activeMessages = activeView === 'group' && activeGroupId ? groupMessages[activeGroupId] ?? [] : messages;
   const recipientOptions = useMemo(() => buildRecipientOptions(activeGroup, profiles), [activeGroup, profiles]);
-  const activeChannelValue = activeView === 'group' && activeGroupId ? `group:${activeGroupId}` : activeView;
+  const activeChannelValue = activeView === 'group' && activeGroupId ? `group:${activeGroupId}` : activeView === 'projects' && activeProjectId ? `project:${activeProjectId}` : activeView;
 
   function handleChannelSelect(value: string) {
     if (value.startsWith('group:')) {
       setActiveGroupId(value.slice('group:'.length));
+      setActiveProjectId(null);
       setActiveView('group');
       return;
     }
+    if (value.startsWith('project:')) {
+      setActiveProjectId(value.slice('project:'.length));
+      setActiveGroupId(null);
+      setActiveView('projects');
+      return;
+    }
     setActiveGroupId(null);
+    if (value !== 'projects') setActiveProjectId(null);
     setActiveView(value as View);
   }
 
@@ -173,20 +303,28 @@ export function App() {
   return (
     <main className="shell">
       <aside className="sidebar">
-        <div className="brand"><span aria-label="Hermes Agora">Ἀ</span><strong>Hermes Agora</strong></div>
+        <div className="brand"><span aria-label="Hermes Agora">HA</span><strong>Hermes Agora</strong></div>
         <label className="mobile-channel-select"><span>Chat</span>
           <select value={activeChannelValue} onChange={(event) => handleChannelSelect(event.target.value)} aria-label="Seleccionar conversación">
-            <option value="chat"># general</option>
+            <option value="chat">General</option>
             <option value="monitor">Monitor</option>
-            {groups.map((group) => <option key={group.id} value={`group:${group.id}`}>@ {group.name}</option>)}
+            <option value="projects">Proyectos</option>
+            {groups.map((group) => <option key={group.id} value={`group:${group.id}`}>Grupo: {group.name}</option>)}
+            {projects.map((project) => <option key={project.id} value={`project:${project.id}`}>Proyecto: {project.name}</option>)}
           </select>
         </label>
-        <button className={`channel ${activeView === 'chat' ? 'active' : ''}`} onClick={() => { setActiveView('chat'); setActiveGroupId(null); }}># general</button>
-        <button className={`channel ${activeView === 'monitor' ? 'active' : ''}`} onClick={() => setActiveView('monitor')}>◉ monitor agentes</button>
+        <button className={`channel ${activeView === 'chat' ? 'active' : ''}`} onClick={() => { setActiveView('chat'); setActiveGroupId(null); setActiveProjectId(null); }}>General</button>
+        <button className={`channel ${activeView === 'monitor' ? 'active' : ''}`} onClick={() => setActiveView('monitor')}>Monitor</button>
+        <button className={`channel ${activeView === 'projects' ? 'active' : ''}`} onClick={() => { setActiveView('projects'); setActiveGroupId(null); setActiveProjectId((current) => current ?? projects[0]?.id ?? null); }}>Proyectos</button>
         <section className="group-list">
           <small>Grupos</small>
-          {groups.map((group) => <button key={group.id} className={`channel group-channel ${activeGroupId === group.id ? 'active' : ''}`} onClick={() => { setActiveView('group'); setActiveGroupId(group.id); }}>@ {group.name}</button>)}
+          {groups.map((group) => <button key={group.id} className={`channel group-channel ${activeGroupId === group.id ? 'active' : ''}`} onClick={() => { setActiveView('group'); setActiveGroupId(group.id); setActiveProjectId(null); }}>Grupo: {group.name}</button>)}
           {groups.length === 0 && <p>No hay grupos todavía.</p>}
+        </section>
+        <section className="group-list project-nav-list">
+          <small>Proyectos</small>
+          {projects.map((project) => <button key={project.id} className={`channel group-channel ${activeProjectId === project.id ? 'active' : ''}`} onClick={() => { setActiveView('projects'); setActiveProjectId(project.id); setActiveGroupId(null); }}>Proyecto: {project.name}</button>)}
+          {projects.length === 0 && <p>No hay proyectos todavía.</p>}
         </section>
         <button className="mobile-admin-toggle" onClick={() => setIsGroupAdminOpen((current) => !current)}>{isGroupAdminOpen ? 'Cerrar' : 'Grupos'}</button>
         <section className="identity">
@@ -195,13 +333,28 @@ export function App() {
           <span>{identity?.type ?? 'human'}</span>
         </section>
       </aside>
-      {activeView === 'monitor' ? <MonitorScreen profiles={profiles} /> : (
+      {activeView === 'monitor' ? <MonitorScreen profiles={profiles} /> : activeView === 'projects' ? (
+        <ProjectsScreen
+          projects={projects}
+          profiles={profiles}
+          activeProject={activeProject}
+          tasks={activeProjectTasks}
+          taskDocuments={taskDocuments}
+          onSelectProject={setActiveProjectId}
+          onSaveProject={handleSaveProject}
+          onDeleteProject={handleDeleteProject}
+          onCreateTask={handleCreateTask}
+          onMoveTask={handleMoveTask}
+          onAppendDocument={handleAppendTaskDocument}
+          onLoadDocuments={handleLoadTaskDocuments}
+        />
+      ) : (
         <section className="chat">
           <header className="chat-header">
             <div className="chat-title-row">
               <div>
-                <h1>{activeGroup ? `@ ${activeGroup.name}` : '# general'}</h1>
-                <p>{activeGroup ? `Grupo privado: ${activeGroup.memberProfileIds.length} perfiles · ${activeGroup.memberProfileIds.join(', ')}` : 'Bus interno para perfiles Hermes. Protocolo: TASK / DONE / BLOCKED / QA.'}</p>
+                <h1>{activeGroup ? activeGroup.name : 'General'}</h1>
+                <p>{activeGroup ? `Grupo privado · ${activeGroup.memberProfileIds.length} perfiles` : 'Canal operativo para coordinación entre perfiles y operadores.'}</p>
               </div>
               {activeGroup && <button className="secondary-action" onClick={() => setIsGroupAdminOpen(true)}>Gestionar miembros</button>}
             </div>
@@ -224,14 +377,164 @@ export function App() {
                 {recipientOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
             </label>
-            <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={composerPlaceholder(composerAction, activeGroup?.name)} />
-            <button aria-label="Enviar mensaje"><span className="send-text">Enviar</span><span className="send-icon" aria-hidden="true">➤</span></button>
+            <textarea value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={composerPlaceholder(composerAction, activeGroup?.name)} rows={1} />
+            <button aria-label="Enviar mensaje"><span className="send-text">Enviar</span><span className="send-icon" aria-hidden="true">↵</span></button>
           </form>
         </section>
       )}
       <GroupAdminPanel groups={groups} profiles={profiles} activeGroupId={activeGroupId} isOpen={isGroupAdminOpen} onOpenChange={setIsGroupAdminOpen} onSave={handleSaveGroup} onDelete={handleDeleteGroup} />
     </main>
   );
+}
+
+function ProjectsScreen({ projects, profiles, activeProject, tasks, taskDocuments, onSelectProject, onSaveProject, onDeleteProject, onCreateTask, onMoveTask, onAppendDocument, onLoadDocuments }: {
+  projects: AgoraProject[];
+  profiles: ProfileStatus[];
+  activeProject: AgoraProject | null;
+  tasks: AgoraTask[];
+  taskDocuments: Record<string, TaskDocument[]>;
+  onSelectProject: (projectId: string | null) => void;
+  onSaveProject: (name: string, description: string, memberProfileIds: string[], projectId?: string) => Promise<void>;
+  onDeleteProject: (projectId: string) => Promise<void>;
+  onCreateTask: (projectId: string, title: string, description: string, assigneeProfileIds: string[]) => Promise<void>;
+  onMoveTask: (projectId: string, task: AgoraTask, status: KanbanStatus) => Promise<void>;
+  onAppendDocument: (projectId: string, task: AgoraTask, body: string) => Promise<void>;
+  onLoadDocuments: (projectId: string, taskId: string) => Promise<void>;
+}) {
+  const [projectName, setProjectName] = useState('');
+  const [projectDescription, setProjectDescription] = useState('');
+  const [projectMembers, setProjectMembers] = useState<string[]>([]);
+  const [taskTitle, setTaskTitle] = useState('');
+  const [taskDescription, setTaskDescription] = useState('');
+  const [taskAssignees, setTaskAssignees] = useState<string[]>([]);
+  const [documentDrafts, setDocumentDrafts] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setProjectName(activeProject?.name ?? '');
+    setProjectDescription(activeProject?.description ?? '');
+    setProjectMembers(activeProject?.memberProfileIds ?? []);
+    setTaskAssignees([]);
+  }, [activeProject]);
+
+  async function saveProject(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    try {
+      await onSaveProject(projectName, projectDescription, projectMembers, activeProject?.id);
+      if (!activeProject) {
+        setProjectName('');
+        setProjectDescription('');
+        setProjectMembers([]);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function createTask(event: FormEvent) {
+    event.preventDefault();
+    if (!activeProject) return;
+    setBusy(true);
+    try {
+      await onCreateTask(activeProject.id, taskTitle, taskDescription, taskAssignees);
+      setTaskTitle('');
+      setTaskDescription('');
+      setTaskAssignees([]);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function documentTask(task: AgoraTask) {
+    if (!activeProject) return;
+    const body = documentDrafts[task.id]?.trim();
+    if (!body) return;
+    setBusy(true);
+    try {
+      await onAppendDocument(activeProject.id, task, body);
+      setDocumentDrafts((current) => ({ ...current, [task.id]: '' }));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const memberNames = new Map(profiles.map((profile) => [profile.profileId, profile.displayName]));
+  return <section className="projects-screen">
+    <header className="chat-header project-header">
+      <div>
+        <h1>Proyectos</h1>
+        <p>Kanban operativo para que operadores y agentes creen, muevan, lean y documenten tareas.</p>
+      </div>
+      <label className="project-select">Proyecto activo
+        <select value={activeProject?.id ?? ''} onChange={(event) => onSelectProject(event.target.value || null)}>
+          <option value="">Selecciona proyecto</option>
+          {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+        </select>
+      </label>
+    </header>
+    <div className="projects-layout">
+      <aside className="project-admin-card">
+        <h2>{activeProject ? 'Proyecto activo' : 'Nuevo proyecto'}</h2>
+        <form onSubmit={saveProject}>
+          <label>Nombre<input value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder="Ej. Hermes Agora" /></label>
+          <label>Descripción<textarea value={projectDescription} onChange={(event) => setProjectDescription(event.target.value)} placeholder="Objetivo, alcance y criterio de cierre" rows={3} /></label>
+          <fieldset>
+            <legend>Miembros</legend>
+            {profiles.map((profile) => <label key={profile.profileId} className="checkbox-row">
+              <input type="checkbox" checked={projectMembers.includes(profile.profileId)} onChange={(event) => setProjectMembers((current) => toggleMemberSelection(current, profile.profileId, event.target.checked))} />
+              <span>{profile.displayName}</span><code>{profile.profileId}</code>
+            </label>)}
+          </fieldset>
+          <button disabled={busy || !projectName.trim() || projectMembers.length === 0}>{activeProject ? 'Guardar proyecto' : 'Crear proyecto'}</button>
+          {activeProject && <button className="danger" type="button" disabled={busy} onClick={() => { if (window.confirm(`Eliminar proyecto ${activeProject.name} y todas sus tareas/documentos?`)) void onDeleteProject(activeProject.id); }}>Eliminar proyecto</button>}
+        </form>
+      </aside>
+      <section className="kanban-area">
+        {activeProject ? <>
+          <form className="task-create-form" onSubmit={createTask}>
+            <div>
+              <strong>Nueva tarea</strong>
+              <p>Se crea en Backlog y los agentes asignados pueden moverla o documentarla por API.</p>
+            </div>
+            <input value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} placeholder="Título de tarea" />
+            <textarea value={taskDescription} onChange={(event) => setTaskDescription(event.target.value)} placeholder="Contexto y criterio de cierre" rows={2} />
+            <div className="assignee-grid">
+              {activeProject.memberProfileIds.map((profileId) => <label key={profileId} className="assignee-chip">
+                <input type="checkbox" checked={taskAssignees.includes(profileId)} onChange={(event) => setTaskAssignees((current) => toggleMemberSelection(current, profileId, event.target.checked))} />
+                {memberNames.get(profileId) ?? profileId}
+              </label>)}
+            </div>
+            <button disabled={busy || !taskTitle.trim()}>Crear tarea</button>
+          </form>
+          <div className="kanban-board">
+            {KANBAN_COLUMNS.map((column) => {
+              const columnTasks = tasks.filter((task) => task.status === column.status);
+              return <section key={column.status} className="kanban-column">
+                <h3>{column.label}<span>{columnTasks.length}</span></h3>
+                {columnTasks.map((task) => <article key={task.id} className="task-card">
+                  <div className="task-card-head"><strong>{task.title}</strong><select value={task.status} onChange={(event) => void onMoveTask(activeProject.id, task, event.target.value as KanbanStatus)}>
+                    {KANBAN_COLUMNS.map((option) => <option key={option.status} value={option.status}>{option.label}</option>)}
+                  </select></div>
+                  {task.description && <p>{task.description}</p>}
+                  <small>Asignado: {task.assigneeProfileIds.length ? task.assigneeProfileIds.map((profileId) => memberNames.get(profileId) ?? profileId).join(', ') : 'sin asignar'}</small>
+                  <details onToggle={(event) => { if ((event.currentTarget as HTMLDetailsElement).open) void onLoadDocuments(activeProject.id, task.id); }}>
+                    <summary>Documentación ({taskDocuments[task.id]?.length ?? 0})</summary>
+                    <ol className="task-documents">
+                      {(taskDocuments[task.id] ?? []).map((document) => <li key={document.id}><strong>{document.kind}</strong><p>{document.body}</p><small>{document.author.displayName} · {formatDate(document.createdAt)}</small></li>)}
+                    </ol>
+                    <textarea value={documentDrafts[task.id] ?? ''} onChange={(event) => setDocumentDrafts((current) => ({ ...current, [task.id]: event.target.value }))} placeholder="Añadir nota, resultado, bloqueo o QA…" rows={3} />
+                    <button type="button" disabled={busy || !documentDrafts[task.id]?.trim()} onClick={() => void documentTask(task)}>Documentar</button>
+                  </details>
+                </article>)}
+                {columnTasks.length === 0 && <p className="empty-column">Sin tareas.</p>}
+              </section>;
+            })}
+          </div>
+        </> : <div className="empty project-empty">Crea o selecciona un proyecto para abrir su kanban.</div>}
+      </section>
+    </div>
+  </section>;
 }
 
 function GroupAdminPanel({ groups, profiles, activeGroupId, isOpen, onOpenChange, onSave, onDelete }: { groups: AgoraGroup[]; profiles: ProfileStatus[]; activeGroupId: string | null; isOpen: boolean; onOpenChange: (open: boolean) => void; onSave: (name: string, memberProfileIds: string[], groupId?: string) => Promise<void>; onDelete: (groupId: string) => Promise<void> }) {
@@ -347,6 +650,16 @@ function appendUnique(messages: AgoraMessage[], message: AgoraMessage) {
   return messages.some((item) => item.id === message.id) ? messages : [...messages, message];
 }
 
+function appendUniqueDocument(documents: TaskDocument[], document: TaskDocument) {
+  return documents.some((item) => item.id === document.id) ? documents : [...documents, document];
+}
+
+function upsertById<T extends { id: string }>(items: T[], nextItem: T): T[] {
+  const exists = items.some((item) => item.id === nextItem.id);
+  const next = exists ? items.map((item) => item.id === nextItem.id ? nextItem : item) : [...items, nextItem];
+  return next.sort((left, right) => left.id.localeCompare(right.id));
+}
+
 function formatMessageTargets(message: AgoraMessage, profiles: ProfileStatus[]): string | null {
   const targets = message.metadata?.targetProfileIds;
   if (!Array.isArray(targets) || targets.length === 0) return null;
@@ -359,11 +672,11 @@ function formatMessageTargets(message: AgoraMessage, profiles: ProfileStatus[]):
 
 function composerPlaceholder(action: ComposerAction, groupName?: string): string {
   const target = groupName ? ` para ${groupName}` : '';
-  if (action === 'TASK') return `ID y tarea${target}: BTC-001 — revisar…`;
-  if (action === 'DONE') return `ID y resultado${target}: BTC-001 — completado…`;
-  if (action === 'BLOCKED') return `ID y bloqueo${target}: BTC-001 — falta contexto…`;
-  if (action === 'QA') return `Revisión QA${target}: criterios, hallazgos…`;
-  return 'Mensaje…';
+  if (action === 'TASK') return `Describe objetivo, contexto y criterio de cierre${target}…`;
+  if (action === 'DONE') return `Resume resultado y evidencia${target}…`;
+  if (action === 'BLOCKED') return `Indica bloqueo, dependencia y responsable${target}…`;
+  if (action === 'QA') return `Criterio revisado y hallazgos${target}…`;
+  return 'Mensaje operativo…';
 }
 
 function formatDate(value: string | null) {

@@ -47,7 +47,7 @@ async function verifyKeycloakToken(token: string, config: ServerConfig): Promise
     profileId,
     displayName: String(payload.name ?? payload.preferred_username ?? 'Keycloak user'),
     email: typeof payload.email === 'string' ? payload.email : undefined,
-    scopes: ['messages:read', 'messages:write'],
+    scopes: ['messages:read', 'messages:write', 'projects:read', 'projects:write'],
     channels: ['general']
   };
 }

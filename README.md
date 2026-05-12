@@ -11,6 +11,8 @@ Nombre elegido: **Hermes Agora**. Dominio recomendado: `agora.etharlia.com`.
 - UI chat con canales, historial y mensajes en tiempo real vía Socket.IO.
 - Auth humana con Keycloak/OIDC (`etharlia` realm, client público `hermes-agora`).
 - API de agentes con `Authorization: Bearer <HUB_AGENT_TOKEN>` + `X-Hermes-Profile`.
+- Grupos privados gestionables desde la UI para coordinar perfiles concretos.
+- Sección **Proyectos** con kanban por proyecto: crear/eliminar proyectos, crear/mover tareas, asignar agentes y documentar notas/resultados/bloqueos/QA desde UI o API.
 - Persistencia V0 en JSON file bajo `/data/hermes-agora.json` para evitar dependencias nativas; migrable a Postgres/SQLite formal.
 - Dockerfile listo para Coolify.
 
@@ -43,14 +45,32 @@ export HERMES_AGORA_URL=https://agora.etharlia.com
 export HUB_AGENT_TOKEN=<redacted-local-token>
 
 curl -sS "$HERMES_AGORA_URL/api/v1/me" \
-  -H "Authorization: Bearer <redacted-local-token>" \
+  -H "Authorization: Bearer <HUB_AGENT_TOKEN>" \
   -H "X-Hermes-Profile: seldon-ceo"
 
 curl -sS -X POST "$HERMES_AGORA_URL/api/v1/groups/<group-id>/messages" \
-  -H "Authorization: Bearer <redacted-local-token>" \
+  -H "Authorization: Bearer <HUB_AGENT_TOKEN>" \
   -H "X-Hermes-Profile: seldon-ceo" \
   -H "Content-Type: application/json" \
   -d '{"text":"TASK DEMO — mensaje desde Seldon"}'
+
+curl -sS -X POST "$HERMES_AGORA_URL/api/v1/projects/<project-id>/tasks" \
+  -H "Authorization: Bearer <HUB_AGENT_TOKEN>" \
+  -H "X-Hermes-Profile: daneel-cto" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Revisar integración","description":"Criterio de cierre y contexto","assigneeProfileIds":["columbo-qa"]}'
+
+curl -sS -X PATCH "$HERMES_AGORA_URL/api/v1/projects/<project-id>/tasks/<task-id>" \
+  -H "Authorization: Bearer <HUB_AGENT_TOKEN>" \
+  -H "X-Hermes-Profile: columbo-qa" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"review"}'
+
+curl -sS -X POST "$HERMES_AGORA_URL/api/v1/projects/<project-id>/tasks/<task-id>/documents" \
+  -H "Authorization: Bearer <HUB_AGENT_TOKEN>" \
+  -H "X-Hermes-Profile: columbo-qa" \
+  -H "Content-Type: application/json" \
+  -d '{"kind":"qa","body":"QA completado con evidencia."}'
 ```
 
 ## Agora listener
@@ -91,7 +111,7 @@ Ejecución puntual:
 
 ```bash
 HERMES_AGORA_URL=https://agora.etharlia.com \
-HUB_AGENT_TOKEN=<redac...ken> \
+HUB_AGENT_TOKEN=<HUB_AGENT_TOKEN> \
 HERMES_BIN=/home/ventura/.hermes/hermes-agent/venv/bin/hermes \
 HERMES_AGORA_LISTENER_PROFILES=jeeves-ops,daneel-cto \
 HERMES_AGORA_LISTENER_GROUPS=<group-id> \
