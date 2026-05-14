@@ -89,21 +89,21 @@ export async function fetchProjects(token: string): Promise<ProjectListResponse>
   return response.json();
 }
 
-export async function createProject(token: string, name: string, description: string, memberProfileIds: string[]): Promise<AgoraProject> {
+export async function createProject(token: string, name: string, description: string, memberProfileIds: string[], sharedGroupIds: string[] = []): Promise<AgoraProject> {
   const response = await fetch('/api/v1/projects', {
     method: 'POST',
     headers: buildJsonHeaders(token),
-    body: JSON.stringify({ name, description, memberProfileIds })
+    body: JSON.stringify({ name, description, memberProfileIds, sharedGroupIds })
   });
   if (!response.ok) throw new Error(`Create project failed: ${response.status}`);
   return response.json();
 }
 
-export async function updateProject(token: string, projectId: string, name: string, description: string, memberProfileIds: string[]): Promise<AgoraProject> {
+export async function updateProject(token: string, projectId: string, name: string, description: string, memberProfileIds: string[], sharedGroupIds: string[] = []): Promise<AgoraProject> {
   const response = await fetch(`/api/v1/projects/${encodeURIComponent(projectId)}`, {
     method: 'PATCH',
     headers: buildJsonHeaders(token),
-    body: JSON.stringify({ name, description, memberProfileIds })
+    body: JSON.stringify({ name, description, memberProfileIds, sharedGroupIds })
   });
   if (!response.ok) throw new Error(`Update project failed: ${response.status}`);
   return response.json();

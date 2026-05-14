@@ -62,7 +62,8 @@ export interface CreateProjectInput {
   id?: string;
   name: string;
   description?: string;
-  memberProfileIds: string[];
+  memberProfileIds?: string[];
+  sharedGroupIds?: string[];
   createdBy: Author;
 }
 
@@ -70,6 +71,7 @@ export interface UpdateProjectInput {
   name?: string;
   description?: string;
   memberProfileIds?: string[];
+  sharedGroupIds?: string[];
   status?: ProjectStatus;
 }
 
@@ -131,7 +133,9 @@ type ProjectRow = {
   name: string;
   description: string;
   status: ProjectStatus;
+  owner_profile_id: string;
   member_profile_ids_json: string;
+  shared_group_ids_json: string;
   created_at: string;
   updated_at: string;
   created_by_json: string;
@@ -288,10 +292,11 @@ export class SQLiteMessageStore {
     const projects = this.allProjects();
     const id = input.id ? normalizeProjectId(input.id) : uniqueProjectId(slugifyProjectName(name), projects);
     if (projects.some((project) => project.id === id)) throw new Error('Project already exists');
-    const memberProfileIds = normalizeMemberProfileIds(input.memberProfileIds);
-    if (memberProfileIds.length === 0) throw new Error('Project needs at least one member');
+    const ownerProfileId = normalizeProfileId(input.createdBy.profileId);
+    const memberProfileIds = normalizeMemberProfileIds(input.memberProfileIds ?? []).filter((profileId) => profileId !== ownerProfileId);
+    const sharedGroupIds = normalizeSharedGroupIds(input.sharedGroupIds ?? []);
     const now = new Date().toISOString();
-    const project: AgoraProject = { id, name, description: normalizeDescription(input.description ?? ''), status: 'active', memberProfileIds, createdAt: now, updatedAt: now, createdBy: input.createdBy };
+    const project: AgoraProject = { id, name, description: normalizeDescription(input.description ?? ''), status: 'active', ownerProfileId, memberProfileIds, sharedGroupIds, createdAt: now, updatedAt: now, createdBy: input.createdBy };
     this.insertProject(project);
     return project;
   }
@@ -301,18 +306,19 @@ export class SQLiteMessageStore {
     if (!project) throw new Error('Project not found');
     if (typeof input.name === 'string') project.name = normalizeProjectName(input.name);
     if (typeof input.description === 'string') project.description = normalizeDescription(input.description);
-    const nextMemberProfileIds = input.memberProfileIds ? normalizeMemberProfileIds(input.memberProfileIds) : null;
-    if (nextMemberProfileIds && nextMemberProfileIds.length === 0) throw new Error('Project needs at least one member');
+    const nextMemberProfileIds = input.memberProfileIds ? normalizeMemberProfileIds(input.memberProfileIds).filter((profileId) => profileId !== project.ownerProfileId) : null;
+    if (input.sharedGroupIds) project.sharedGroupIds = normalizeSharedGroupIds(input.sharedGroupIds);
     if (input.status) project.status = parseProjectStatus(input.status);
     project.updatedAt = new Date().toISOString();
 
     const tx = this.db.transaction(() => {
       if (nextMemberProfileIds) {
         project.memberProfileIds = nextMemberProfileIds;
+        const allowedAssignees = assignableProjectProfileIds(project);
         const tasks = this.listProjectTasks(project.id).tasks;
         const updateAssignees = this.db.prepare(`UPDATE tasks SET assignee_profile_ids_json = ? WHERE id = ?`);
         for (const task of tasks) {
-          updateAssignees.run(toJson(task.assigneeProfileIds.filter((profileId) => nextMemberProfileIds.includes(profileId))), task.id);
+          updateAssignees.run(toJson(task.assigneeProfileIds.filter((profileId) => allowedAssignees.includes(profileId))), task.id);
         }
       }
       this.insertProject(project);
@@ -348,7 +354,7 @@ export class SQLiteMessageStore {
       title,
       description: normalizeDescription(input.description ?? ''),
       status: input.status ? parseKanbanStatus(input.status) : 'backlog',
-      assigneeProfileIds: normalizeAssignees(input.assigneeProfileIds ?? [], project.memberProfileIds),
+      assigneeProfileIds: normalizeAssignees(input.assigneeProfileIds ?? [], assignableProjectProfileIds(project)),
       labels: normalizeLabels(input.labels ?? []),
       order: nextTaskOrder(this.listProjectTasks(project.id).tasks),
       sourceMessageId: input.sourceMessageId ?? null,
@@ -374,7 +380,7 @@ export class SQLiteMessageStore {
     if (typeof input.title === 'string') task.title = normalizeTaskTitle(input.title);
     if (typeof input.description === 'string') task.description = normalizeDescription(input.description);
     if (input.status) task.status = parseKanbanStatus(input.status);
-    if (input.assigneeProfileIds) task.assigneeProfileIds = normalizeAssignees(input.assigneeProfileIds, project.memberProfileIds);
+    if (input.assigneeProfileIds) task.assigneeProfileIds = normalizeAssignees(input.assigneeProfileIds, assignableProjectProfileIds(project));
     if (input.labels) task.labels = normalizeLabels(input.labels);
     if (typeof input.order === 'number' && Number.isFinite(input.order)) task.order = Math.max(0, input.order);
     const now = new Date().toISOString();
@@ -507,7 +513,9 @@ export class SQLiteMessageStore {
         name TEXT NOT NULL,
         description TEXT NOT NULL DEFAULT '',
         status TEXT NOT NULL,
+        owner_profile_id TEXT NOT NULL DEFAULT '',
         member_profile_ids_json TEXT NOT NULL,
+        shared_group_ids_json TEXT NOT NULL DEFAULT '[]',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         created_by_json TEXT NOT NULL
@@ -543,7 +551,21 @@ export class SQLiteMessageStore {
       );
       CREATE INDEX IF NOT EXISTS idx_task_documents_task_created ON task_documents(task_id, created_at);
     `);
+    this.ensureProjectSharingColumns();
     this.db.prepare(`INSERT INTO meta (key, value) VALUES ('schema_version', '1') ON CONFLICT(key) DO NOTHING`).run();
+  }
+
+  private ensureProjectSharingColumns(): void {
+    const columns = new Set((this.db.prepare(`PRAGMA table_info(projects)`).all() as Array<{ name: string }>).map((column) => column.name));
+    if (!columns.has('owner_profile_id')) this.db.prepare(`ALTER TABLE projects ADD COLUMN owner_profile_id TEXT NOT NULL DEFAULT ''`).run();
+    if (!columns.has('shared_group_ids_json')) this.db.prepare(`ALTER TABLE projects ADD COLUMN shared_group_ids_json TEXT NOT NULL DEFAULT '[]'`).run();
+
+    const rows = this.db.prepare(`SELECT id, created_by_json, owner_profile_id FROM projects WHERE owner_profile_id = ''`).all() as Array<{ id: string; created_by_json: string; owner_profile_id: string }>;
+    const update = this.db.prepare(`UPDATE projects SET owner_profile_id = ? WHERE id = ?`);
+    for (const row of rows) {
+      const createdBy = fromJson<Author>(row.created_by_json);
+      update.run(normalizeProfileId(createdBy.profileId), row.id);
+    }
   }
 
   private async importJsonIfNeeded(importJsonFile?: string): Promise<void> {
@@ -561,7 +583,12 @@ export class SQLiteMessageStore {
       messages: parsed.messages.map((message) => ({ ...message, groupId: message.groupId ?? null })),
       groups: parsed.groups ?? [],
       profileStatuses: parsed.profileStatuses ?? {},
-      projects: parsed.projects ?? [],
+      projects: (parsed.projects ?? []).map((project) => ({
+        ...project,
+        ownerProfileId: project.ownerProfileId ?? project.createdBy.profileId,
+        memberProfileIds: project.memberProfileIds ?? [],
+        sharedGroupIds: project.sharedGroupIds ?? []
+      })),
       tasks: parsed.tasks ?? [],
       taskDocuments: parsed.taskDocuments ?? []
     };
@@ -628,7 +655,7 @@ export class SQLiteMessageStore {
   }
 
   private insertProject(project: AgoraProject): void {
-    this.db.prepare(`INSERT INTO projects (id, name, description, status, member_profile_ids_json, created_at, updated_at, created_by_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name = excluded.name, description = excluded.description, status = excluded.status, member_profile_ids_json = excluded.member_profile_ids_json, updated_at = excluded.updated_at`).run(project.id, project.name, project.description, project.status, toJson(project.memberProfileIds), project.createdAt, project.updatedAt, toJson(project.createdBy));
+    this.db.prepare(`INSERT INTO projects (id, name, description, status, owner_profile_id, member_profile_ids_json, shared_group_ids_json, created_at, updated_at, created_by_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name = excluded.name, description = excluded.description, status = excluded.status, owner_profile_id = excluded.owner_profile_id, member_profile_ids_json = excluded.member_profile_ids_json, shared_group_ids_json = excluded.shared_group_ids_json, updated_at = excluded.updated_at`).run(project.id, project.name, project.description, project.status, project.ownerProfileId, toJson(project.memberProfileIds), toJson(project.sharedGroupIds), project.createdAt, project.updatedAt, toJson(project.createdBy));
   }
 
   private insertTask(task: AgoraTask): void {
@@ -697,7 +724,19 @@ function rowToGroup(row: GroupRow): AgoraGroup {
 }
 
 function rowToProject(row: ProjectRow): AgoraProject {
-  return { id: row.id, name: row.name, description: row.description, status: parseProjectStatus(row.status), memberProfileIds: fromJson<string[]>(row.member_profile_ids_json), createdAt: row.created_at, updatedAt: row.updated_at, createdBy: fromJson<Author>(row.created_by_json) };
+  const createdBy = fromJson<Author>(row.created_by_json);
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    status: parseProjectStatus(row.status),
+    ownerProfileId: normalizeProfileId(row.owner_profile_id || createdBy.profileId),
+    memberProfileIds: fromJson<string[]>(row.member_profile_ids_json),
+    sharedGroupIds: fromJson<string[]>(row.shared_group_ids_json || '[]'),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    createdBy
+  };
 }
 
 function rowToTask(row: TaskRow): AgoraTask {
@@ -792,14 +831,38 @@ function normalizeMemberProfileIds(profileIds: string[]): string[] {
   const normalized: string[] = [];
   for (const profileIdRaw of profileIds) {
     if (typeof profileIdRaw !== 'string') throw new Error('Invalid member profile id');
-    const profileId = profileIdRaw.trim().toLowerCase();
-    if (!profileId.match(/^[a-z0-9][a-z0-9-]{1,63}$/)) throw new Error(`Invalid member profile id: ${profileIdRaw}`);
+    const profileId = normalizeProfileId(profileIdRaw);
     if (!seen.has(profileId)) {
       seen.add(profileId);
       normalized.push(profileId);
     }
   }
   return normalized;
+}
+
+function normalizeProfileId(profileIdRaw: string): string {
+  const profileId = profileIdRaw.trim().toLowerCase();
+  if (!profileId.match(/^[a-z0-9][a-z0-9._@-]{1,127}$/)) throw new Error(`Invalid member profile id: ${profileIdRaw}`);
+  return profileId;
+}
+
+function normalizeSharedGroupIds(groupIds: string[]): string[] {
+  if (!Array.isArray(groupIds)) throw new Error('sharedGroupIds must be an array');
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+  for (const groupIdRaw of groupIds) {
+    if (typeof groupIdRaw !== 'string') throw new Error('Invalid shared group id');
+    const groupId = normalizeGroupId(groupIdRaw);
+    if (!seen.has(groupId)) {
+      seen.add(groupId);
+      normalized.push(groupId);
+    }
+  }
+  return normalized;
+}
+
+function assignableProjectProfileIds(project: AgoraProject): string[] {
+  return normalizeMemberProfileIds([project.ownerProfileId, ...project.memberProfileIds]);
 }
 
 function slugifyGroupName(name: string): string {

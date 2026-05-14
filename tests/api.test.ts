@@ -221,6 +221,86 @@ describe('agent API', () => {
       .expect(403);
   });
 
+  it('creates private projects for the requester and keeps them hidden from outsiders', async () => {
+    const create = await request(app)
+      .post('/api/v1/projects')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'jeeves-ops')
+      .send({ name: 'Jeeves Private', description: 'Solo propietario' })
+      .expect(201);
+
+    expect(create.body.id).toBe('jeeves-private');
+    expect(create.body.ownerProfileId).toBe('jeeves-ops');
+    expect(create.body.memberProfileIds).toEqual([]);
+    expect(create.body.sharedGroupIds).toEqual([]);
+
+    const ownerList = await request(app)
+      .get('/api/v1/projects')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'jeeves-ops')
+      .expect(200);
+    expect(ownerList.body.projects.map((project: { id: string }) => project.id)).toContain(create.body.id);
+
+    const outsiderList = await request(app)
+      .get('/api/v1/projects')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'columbo-qa')
+      .expect(200);
+    expect(outsiderList.body.projects.map((project: { id: string }) => project.id)).not.toContain(create.body.id);
+
+    await request(app)
+      .get(`/api/v1/projects/${create.body.id}`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'columbo-qa')
+      .expect(403);
+  });
+
+  it('shares projects through groups and limits project management to owner or admin', async () => {
+    const group = await request(app)
+      .post('/api/v1/groups')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'seldon-ceo')
+      .send({ name: 'Proyecto Grupo', memberProfileIds: ['jeeves-ops', 'columbo-qa'] })
+      .expect(201);
+
+    const project = await request(app)
+      .post('/api/v1/projects')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'jeeves-ops')
+      .send({ name: 'Shared By Group', sharedGroupIds: [group.body.id] })
+      .expect(201);
+
+    expect(project.body.ownerProfileId).toBe('jeeves-ops');
+    expect(project.body.sharedGroupIds).toEqual([group.body.id]);
+
+    const groupMemberList = await request(app)
+      .get('/api/v1/projects')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'columbo-qa')
+      .expect(200);
+    expect(groupMemberList.body.projects.map((item: { id: string }) => item.id)).toContain(project.body.id);
+
+    await request(app)
+      .post(`/api/v1/projects/${project.body.id}/tasks`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'columbo-qa')
+      .send({ title: 'Tarea por grupo' })
+      .expect(201);
+
+    await request(app)
+      .patch(`/api/v1/projects/${project.body.id}`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'columbo-qa')
+      .send({ name: 'No debería' })
+      .expect(403);
+
+    await request(app)
+      .get(`/api/v1/projects/${project.body.id}`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'daneel-cto')
+      .expect(403);
+  });
+
   it('creates projects and restricts visibility to project members', async () => {
     const create = await request(app)
       .post('/api/v1/projects')
@@ -246,12 +326,13 @@ describe('agent API', () => {
       .expect(200);
     expect(outsiderList.body.projects.map((project: { id: string }) => project.id)).not.toContain(create.body.id);
 
-    await request(app)
+    const jeevesPrivate = await request(app)
       .post('/api/v1/projects')
       .set('Authorization', 'Bearer test-secret')
       .set('X-Hermes-Profile', 'jeeves-ops')
-      .send({ name: 'Nope', memberProfileIds: ['jeeves-ops'] })
-      .expect(403);
+      .send({ name: 'Jeeves Own Project' })
+      .expect(201);
+    expect(jeevesPrivate.body.ownerProfileId).toBe('jeeves-ops');
   });
 
   it('lets project members create, move, read and document kanban tasks', async () => {

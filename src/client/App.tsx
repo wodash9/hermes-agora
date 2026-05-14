@@ -144,10 +144,10 @@ export function App() {
     setProjectTasks((current) => ({ ...current, [projectId]: response.tasks }));
   }
 
-  async function handleSaveProject(name: string, description: string, memberProfileIds: string[], projectId?: string) {
+  async function handleSaveProject(name: string, description: string, memberProfileIds: string[], sharedGroupIds: string[], projectId?: string) {
     if (!token) return;
     try {
-      const project = projectId ? await updateProject(token, projectId, name, description, memberProfileIds) : await createProject(token, name, description, memberProfileIds);
+      const project = projectId ? await updateProject(token, projectId, name, description, memberProfileIds, sharedGroupIds) : await createProject(token, name, description, memberProfileIds, sharedGroupIds);
       const projectResponse = await fetchProjects(token);
       setProjects(projectResponse.projects);
       setActiveProjectId(project.id);
@@ -336,7 +336,9 @@ export function App() {
       {activeView === 'monitor' ? <MonitorScreen profiles={profiles} /> : activeView === 'projects' ? (
         <ProjectsScreen
           projects={projects}
+          groups={groups}
           profiles={profiles}
+          identity={identity}
           activeProject={activeProject}
           tasks={activeProjectTasks}
           taskDocuments={taskDocuments}
@@ -387,14 +389,16 @@ export function App() {
   );
 }
 
-function ProjectsScreen({ projects, profiles, activeProject, tasks, taskDocuments, onSelectProject, onSaveProject, onDeleteProject, onCreateTask, onMoveTask, onAppendDocument, onLoadDocuments }: {
+function ProjectsScreen({ projects, groups, profiles, identity, activeProject, tasks, taskDocuments, onSelectProject, onSaveProject, onDeleteProject, onCreateTask, onMoveTask, onAppendDocument, onLoadDocuments }: {
   projects: AgoraProject[];
+  groups: AgoraGroup[];
   profiles: ProfileStatus[];
+  identity: Identity | null;
   activeProject: AgoraProject | null;
   tasks: AgoraTask[];
   taskDocuments: Record<string, TaskDocument[]>;
   onSelectProject: (projectId: string | null) => void;
-  onSaveProject: (name: string, description: string, memberProfileIds: string[], projectId?: string) => Promise<void>;
+  onSaveProject: (name: string, description: string, memberProfileIds: string[], sharedGroupIds: string[], projectId?: string) => Promise<void>;
   onDeleteProject: (projectId: string) => Promise<void>;
   onCreateTask: (projectId: string, title: string, description: string, assigneeProfileIds: string[]) => Promise<void>;
   onMoveTask: (projectId: string, task: AgoraTask, status: KanbanStatus) => Promise<void>;
@@ -404,6 +408,7 @@ function ProjectsScreen({ projects, profiles, activeProject, tasks, taskDocument
   const [projectName, setProjectName] = useState('');
   const [projectDescription, setProjectDescription] = useState('');
   const [projectMembers, setProjectMembers] = useState<string[]>([]);
+  const [projectSharedGroupIds, setProjectSharedGroupIds] = useState<string[]>([]);
   const [taskTitle, setTaskTitle] = useState('');
   const [taskDescription, setTaskDescription] = useState('');
   const [taskAssignees, setTaskAssignees] = useState<string[]>([]);
@@ -414,6 +419,7 @@ function ProjectsScreen({ projects, profiles, activeProject, tasks, taskDocument
     setProjectName(activeProject?.name ?? '');
     setProjectDescription(activeProject?.description ?? '');
     setProjectMembers(activeProject?.memberProfileIds ?? []);
+    setProjectSharedGroupIds(activeProject?.sharedGroupIds ?? []);
     setTaskAssignees([]);
   }, [activeProject]);
 
@@ -421,11 +427,12 @@ function ProjectsScreen({ projects, profiles, activeProject, tasks, taskDocument
     event.preventDefault();
     setBusy(true);
     try {
-      await onSaveProject(projectName, projectDescription, projectMembers, activeProject?.id);
+      await onSaveProject(projectName, projectDescription, projectMembers, projectSharedGroupIds, activeProject?.id);
       if (!activeProject) {
         setProjectName('');
         setProjectDescription('');
         setProjectMembers([]);
+        setProjectSharedGroupIds([]);
       }
     } finally {
       setBusy(false);
@@ -460,11 +467,15 @@ function ProjectsScreen({ projects, profiles, activeProject, tasks, taskDocument
   }
 
   const memberNames = new Map(profiles.map((profile) => [profile.profileId, profile.displayName]));
+  if (identity) memberNames.set(identity.profileId, identity.displayName);
+  const knownProjectMembers = identity && !profiles.some((profile) => profile.profileId === identity.profileId)
+    ? [{ profileId: identity.profileId, displayName: `${identity.displayName} (yo)` }, ...profiles]
+    : profiles;
   return <section className="projects-screen">
     <header className="chat-header project-header">
       <div>
         <h1>Proyectos</h1>
-        <p>Kanban operativo para que operadores y agentes creen, muevan, lean y documenten tareas.</p>
+        <p>Kanban operativo con proyectos privados por defecto y compartición por usuarios/perfiles o grupos.</p>
       </div>
       <label className="project-select">Proyecto activo
         <select value={activeProject?.id ?? ''} onChange={(event) => onSelectProject(event.target.value || null)}>
@@ -480,18 +491,32 @@ function ProjectsScreen({ projects, profiles, activeProject, tasks, taskDocument
           <label>Nombre<input value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder="Ej. Hermes Agora" /></label>
           <label>Descripción<textarea value={projectDescription} onChange={(event) => setProjectDescription(event.target.value)} placeholder="Objetivo, alcance y criterio de cierre" rows={3} /></label>
           <fieldset>
-            <legend>Miembros</legend>
-            {profiles.map((profile) => <label key={profile.profileId} className="checkbox-row">
+            <legend>Compartir con usuarios/perfiles</legend>
+            <p className="form-hint">Si no marcas nadie ni ningún grupo, el proyecto queda privado para el propietario.</p>
+            {knownProjectMembers.map((profile) => <label key={profile.profileId} className="checkbox-row">
               <input type="checkbox" checked={projectMembers.includes(profile.profileId)} onChange={(event) => setProjectMembers((current) => toggleMemberSelection(current, profile.profileId, event.target.checked))} />
               <span>{profile.displayName}</span><code>{profile.profileId}</code>
             </label>)}
           </fieldset>
-          <button disabled={busy || !projectName.trim() || projectMembers.length === 0}>{activeProject ? 'Guardar proyecto' : 'Crear proyecto'}</button>
+          <fieldset>
+            <legend>Compartir con grupos</legend>
+            {groups.map((group) => <label key={group.id} className="checkbox-row">
+              <input type="checkbox" checked={projectSharedGroupIds.includes(group.id)} onChange={(event) => setProjectSharedGroupIds((current) => toggleMemberSelection(current, group.id, event.target.checked))} />
+              <span>{group.name}</span><code>{group.id}</code>
+            </label>)}
+            {groups.length === 0 && <p className="form-hint">No hay grupos disponibles.</p>}
+          </fieldset>
+          <button disabled={busy || !projectName.trim()}>{activeProject ? 'Guardar proyecto' : 'Crear proyecto'}</button>
           {activeProject && <button className="danger" type="button" disabled={busy} onClick={() => { if (window.confirm(`Eliminar proyecto ${activeProject.name} y todas sus tareas/documentos?`)) void onDeleteProject(activeProject.id); }}>Eliminar proyecto</button>}
         </form>
       </aside>
       <section className="kanban-area">
         {activeProject ? <>
+          <div className="project-access-summary">
+            <span>Propietario: {memberNames.get(activeProject.ownerProfileId) ?? activeProject.ownerProfileId}</span>
+            <span>Usuarios/perfiles: {activeProject.memberProfileIds.length || 'privado'}</span>
+            <span>Grupos: {activeProject.sharedGroupIds.length || 'sin grupos'}</span>
+          </div>
           <form className="task-create-form" onSubmit={createTask}>
             <div>
               <strong>Nueva tarea</strong>
@@ -500,7 +525,7 @@ function ProjectsScreen({ projects, profiles, activeProject, tasks, taskDocument
             <input value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} placeholder="Título de tarea" />
             <textarea value={taskDescription} onChange={(event) => setTaskDescription(event.target.value)} placeholder="Contexto y criterio de cierre" rows={2} />
             <div className="assignee-grid">
-              {activeProject.memberProfileIds.map((profileId) => <label key={profileId} className="assignee-chip">
+              {[activeProject.ownerProfileId, ...activeProject.memberProfileIds].filter((profileId, index, all) => all.indexOf(profileId) === index).map((profileId) => <label key={profileId} className="assignee-chip">
                 <input type="checkbox" checked={taskAssignees.includes(profileId)} onChange={(event) => setTaskAssignees((current) => toggleMemberSelection(current, profileId, event.target.checked))} />
                 {memberNames.get(profileId) ?? profileId}
               </label>)}

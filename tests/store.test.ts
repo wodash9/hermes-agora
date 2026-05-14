@@ -42,18 +42,22 @@ describe('SQLiteMessageStore', () => {
     expect(statuses.profiles.every((profile) => profile.status === 'idle')).toBe(true);
   });
 
-  it('persists projects, kanban tasks and task documents across reopen', async () => {
+  it('persists private/shared projects, kanban tasks and task documents across reopen', async () => {
     dir = mkdtempSync(join(tmpdir(), 'agora-'));
     const file = join(dir, 'store.sqlite');
     const store = await SQLiteMessageStore.open(file);
     const author = { type: 'agent' as const, profileId: 'seldon-ceo', displayName: 'Seldon' };
-    const project = await store.createProject({ name: 'Persistent Project', description: 'Persistencia', memberProfileIds: ['daneel-cto'], createdBy: author });
+    const project = await store.createProject({ name: 'Persistent Project', description: 'Persistencia', memberProfileIds: ['daneel-cto'], sharedGroupIds: ['qa-squad'], createdBy: author });
+    expect(project.ownerProfileId).toBe('seldon-ceo');
+    expect(project.sharedGroupIds).toEqual(['qa-squad']);
     const task = await store.createProjectTask({ projectId: project.id, title: 'Persistir tarea', assigneeProfileIds: ['daneel-cto'], createdBy: author });
     await store.updateProjectTask(project.id, task.id, { status: 'done', updatedBy: author });
     await store.appendTaskDocument(project.id, task.id, { kind: 'result', body: 'Hecho', author });
 
     const reopened = await SQLiteMessageStore.open(file);
     expect(reopened.listProjects().projects[0].name).toBe('Persistent Project');
+    expect(reopened.listProjects().projects[0].ownerProfileId).toBe('seldon-ceo');
+    expect(reopened.listProjects().projects[0].sharedGroupIds).toEqual(['qa-squad']);
     expect(reopened.listProjectTasks(project.id).tasks[0].status).toBe('done');
     expect(reopened.listTaskDocuments(project.id, task.id).documents[0].body).toBe('Hecho');
   });
@@ -99,7 +103,9 @@ describe('SQLiteMessageStore', () => {
         name: 'Legacy Project',
         description: 'from json',
         status: 'active',
+        ownerProfileId: 'seldon-ceo',
         memberProfileIds: ['seldon-ceo'],
+        sharedGroupIds: [],
         createdAt: '2026-05-12T00:00:00.000Z',
         updatedAt: '2026-05-12T00:00:00.000Z',
         createdBy: { type: 'agent', profileId: 'seldon-ceo', displayName: 'Seldon' }

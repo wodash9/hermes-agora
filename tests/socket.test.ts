@@ -88,21 +88,30 @@ describe('Socket.IO auth', () => {
     outsider.close();
   });
 
-  it('emits project task updates only to members with projects:read scope', async () => {
+  it('emits project task updates to direct members or shared group members with projects:read scope', async () => {
     const scopedMember = await connect({ token: 'test-secret', profileId: 'jeeves-ops' });
+    const groupMember = await connect({ token: 'test-secret', profileId: 'columbo-qa' });
     const limitedMember = await connect({ token: 'test-secret', profileId: 'limited-agent' });
-    const outsider = await connect({ token: 'test-secret', profileId: 'columbo-qa' });
+    const outsider = await connect({ token: 'test-secret', profileId: 'seldon-ceo' });
+    const group = await request(app)
+      .post('/api/v1/groups')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'seldon-ceo')
+      .send({ name: 'Socket Project Group', memberProfileIds: ['jeeves-ops', 'columbo-qa'] })
+      .expect(201);
     const project = await request(app)
       .post('/api/v1/projects')
       .set('Authorization', 'Bearer test-secret')
-      .set('X-Hermes-Profile', 'seldon-ceo')
-      .send({ name: 'Socket Project', memberProfileIds: ['jeeves-ops', 'limited-agent'] })
+      .set('X-Hermes-Profile', 'jeeves-ops')
+      .send({ name: 'Socket Project', memberProfileIds: ['jeeves-ops', 'limited-agent'], sharedGroupIds: [group.body.id] })
       .expect(201);
 
     let scopedCount = 0;
+    let groupMemberCount = 0;
     let limitedCount = 0;
     let outsiderCount = 0;
     scopedMember.on('task:updated', () => { scopedCount += 1; });
+    groupMember.on('task:updated', () => { groupMemberCount += 1; });
     limitedMember.on('task:updated', () => { limitedCount += 1; });
     outsider.on('task:updated', () => { outsiderCount += 1; });
 
@@ -115,9 +124,11 @@ describe('Socket.IO auth', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 80));
     expect(scopedCount).toBe(1);
+    expect(groupMemberCount).toBe(1);
     expect(limitedCount).toBe(0);
-    expect(outsiderCount).toBe(0);
+    expect(outsiderCount).toBe(1);
     scopedMember.close();
+    groupMember.close();
     limitedMember.close();
     outsider.close();
   });

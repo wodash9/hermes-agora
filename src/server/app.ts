@@ -89,7 +89,7 @@ export async function createAgoraApp({ config, store }: CreateAgoraAppOptions) {
   });
 
   app.post('/api/v1/groups', auth, requireScope('messages:write'), async (req: AuthenticatedRequest, res) => {
-    if (!canManageGroups(req.identity!)) return res.status(403).json({ error: 'Only humans or admin agents can create groups' });
+    if (!canCreateGroups(req.identity!)) return res.status(403).json({ error: 'Only humans or admin agents can create groups' });
     try {
       const memberProfileIds = parseMemberProfileIds(req.body.memberProfileIds, config);
       const group = await store.createGroup({
@@ -106,9 +106,9 @@ export async function createAgoraApp({ config, store }: CreateAgoraAppOptions) {
   });
 
   app.patch('/api/v1/groups/:groupId', auth, requireScope('messages:write'), async (req: AuthenticatedRequest, res) => {
-    if (!canManageGroups(req.identity!)) return res.status(403).json({ error: 'Only humans or admin agents can update groups' });
     try {
       const groupId = normalizeGroupId(String(req.params.groupId));
+      requireGroupManageAccess(store, req.identity!, groupId);
       const group = await store.updateGroup(groupId, {
         name: typeof req.body.name === 'string' ? req.body.name : undefined,
         memberProfileIds: Array.isArray(req.body.memberProfileIds) ? parseMemberProfileIds(req.body.memberProfileIds, config) : undefined
@@ -122,8 +122,8 @@ export async function createAgoraApp({ config, store }: CreateAgoraAppOptions) {
   });
 
   app.delete('/api/v1/groups/:groupId', auth, requireScope('messages:write'), async (req: AuthenticatedRequest, res) => {
-    if (!canManageGroups(req.identity!)) return res.status(403).json({ error: 'Only humans or admin agents can delete groups' });
     try {
+      requireGroupManageAccess(store, req.identity!, String(req.params.groupId));
       const deleted = await store.deleteGroup(String(req.params.groupId));
       if (!deleted) return res.status(404).json({ error: 'Group not found' });
       res.status(204).send();
@@ -172,19 +172,20 @@ export async function createAgoraApp({ config, store }: CreateAgoraAppOptions) {
 
   app.get('/api/v1/projects', auth, requireScope('projects:read'), (req: AuthenticatedRequest, res) => {
     const allProjects = store.listProjects();
-    const projects = canManageProjects(req.identity!) ? allProjects.projects : allProjects.projects.filter((project) => isProjectMember(req.identity!, project));
+    const projects = canManageProjects(req.identity!) ? allProjects.projects : allProjects.projects.filter((project) => isProjectMember(req.identity!, project, store));
     res.json({ projects, generatedAt: allProjects.generatedAt });
   });
 
   app.post('/api/v1/projects', auth, requireScope('projects:write'), async (req: AuthenticatedRequest, res) => {
-    if (!canManageProjects(req.identity!)) return res.status(403).json({ error: 'Only humans or admin agents can create projects' });
     try {
-      const memberProfileIds = parseMemberProfileIds(req.body.memberProfileIds, config);
+      const memberProfileIds = parseProjectMemberProfileIds(req.body.memberProfileIds);
+      const sharedGroupIds = parseSharedGroupIds(req.body.sharedGroupIds, store, req.identity!);
       const project = await store.createProject({
         id: typeof req.body.id === 'string' ? req.body.id : undefined,
         name: typeof req.body.name === 'string' ? req.body.name : '',
         description: typeof req.body.description === 'string' ? req.body.description : '',
         memberProfileIds,
+        sharedGroupIds,
         createdBy: req.identity!
       });
       events.emit('project:updated', project);
@@ -204,13 +205,14 @@ export async function createAgoraApp({ config, store }: CreateAgoraAppOptions) {
   });
 
   app.patch('/api/v1/projects/:projectId', auth, requireScope('projects:write'), async (req: AuthenticatedRequest, res) => {
-    if (!canManageProjects(req.identity!)) return res.status(403).json({ error: 'Only humans or admin agents can update projects' });
     try {
       const projectId = normalizeProjectId(String(req.params.projectId));
-      const project = await store.updateProject(projectId, {
+      const current = requireProjectManageAccess(store, req.identity!, projectId);
+      const project = await store.updateProject(current.id, {
         name: typeof req.body.name === 'string' ? req.body.name : undefined,
         description: typeof req.body.description === 'string' ? req.body.description : undefined,
-        memberProfileIds: Array.isArray(req.body.memberProfileIds) ? parseMemberProfileIds(req.body.memberProfileIds, config) : undefined,
+        memberProfileIds: Array.isArray(req.body.memberProfileIds) ? parseProjectMemberProfileIds(req.body.memberProfileIds) : undefined,
+        sharedGroupIds: Array.isArray(req.body.sharedGroupIds) ? parseSharedGroupIds(req.body.sharedGroupIds, store, req.identity!) : undefined,
         status: typeof req.body.status === 'string' ? parseProjectStatus(req.body.status) : undefined
       });
       events.emit('project:updated', project);
@@ -221,9 +223,9 @@ export async function createAgoraApp({ config, store }: CreateAgoraAppOptions) {
   });
 
   app.delete('/api/v1/projects/:projectId', auth, requireScope('projects:write'), async (req: AuthenticatedRequest, res) => {
-    if (!canManageProjects(req.identity!)) return res.status(403).json({ error: 'Only humans or admin agents can delete projects' });
     try {
       const projectId = normalizeProjectId(String(req.params.projectId));
+      requireProjectManageAccess(store, req.identity!, projectId);
       const deleted = await store.deleteProject(projectId);
       if (!deleted) return res.status(404).json({ error: 'Project not found' });
       events.emit('project:deleted', projectId);
@@ -355,20 +357,28 @@ export async function createAgoraApp({ config, store }: CreateAgoraAppOptions) {
   return { app, events };
 }
 
-function canManageGroups(identity: Identity): boolean {
+function canCreateGroups(identity: Identity): boolean {
   return identity.type === 'human' || identity.scopes.includes('admin');
+}
+
+function canManageGroups(identity: Identity): boolean {
+  return identity.scopes.includes('admin');
 }
 
 function canManageProjects(identity: Identity): boolean {
-  return identity.type === 'human' || identity.scopes.includes('admin');
+  return identity.scopes.includes('admin');
 }
 
 function isGroupMember(identity: Identity, group: AgoraGroup): boolean {
-  return canManageGroups(identity) || group.memberProfileIds.includes(identity.profileId);
+  return canManageGroups(identity) || group.createdBy.profileId === identity.profileId || group.memberProfileIds.includes(identity.profileId);
 }
 
-function isProjectMember(identity: Identity, project: AgoraProject): boolean {
-  return canManageProjects(identity) || project.memberProfileIds.includes(identity.profileId);
+function isProjectMember(identity: Identity, project: AgoraProject, store: SQLiteMessageStore): boolean {
+  if (!identity.scopes.includes('projects:read') && !identity.scopes.includes('projects:write') && !identity.scopes.includes('admin') && identity.type !== 'human') return false;
+  return canManageProjects(identity) || project.ownerProfileId === identity.profileId || project.memberProfileIds.includes(identity.profileId) || project.sharedGroupIds.some((groupId) => {
+    const group = store.getGroup(groupId);
+    return group ? isGroupMember(identity, group) : false;
+  });
 }
 
 function requireGroupAccess(store: SQLiteMessageStore, identity: Identity, groupIdRaw: string): AgoraGroup {
@@ -378,10 +388,24 @@ function requireGroupAccess(store: SQLiteMessageStore, identity: Identity, group
   return group;
 }
 
+function requireGroupManageAccess(store: SQLiteMessageStore, identity: Identity, groupIdRaw: string): AgoraGroup {
+  const group = store.getGroup(groupIdRaw);
+  if (!group) throw new Error('Group not found');
+  if (!canManageGroups(identity) && group.createdBy.profileId !== identity.profileId) throw new Error('Group forbidden for this identity');
+  return group;
+}
+
 function requireProjectAccess(store: SQLiteMessageStore, identity: Identity, projectIdRaw: string): AgoraProject {
   const project = store.getProject(projectIdRaw);
   if (!project) throw new Error('Project not found');
-  if (!isProjectMember(identity, project)) throw new Error('Project forbidden for this identity');
+  if (!isProjectMember(identity, project, store)) throw new Error('Project forbidden for this identity');
+  return project;
+}
+
+function requireProjectManageAccess(store: SQLiteMessageStore, identity: Identity, projectIdRaw: string): AgoraProject {
+  const project = store.getProject(projectIdRaw);
+  if (!project) throw new Error('Project not found');
+  if (!canManageProjects(identity) && project.ownerProfileId !== identity.profileId) throw new Error('Project forbidden for this identity');
   return project;
 }
 
@@ -411,6 +435,42 @@ function parseMemberProfileIds(value: unknown, config: ServerConfig): string[] {
     }
   }
   return memberProfileIds;
+}
+
+function parseProjectMemberProfileIds(value: unknown): string[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) throw new Error('memberProfileIds must be an array');
+  const memberProfileIds: string[] = [];
+  const seen = new Set<string>();
+  for (const item of value) {
+    if (typeof item !== 'string') throw new Error('Invalid member profile id');
+    const profileId = item.trim().toLowerCase();
+    if (!profileId.match(/^[a-z0-9][a-z0-9._@-]{1,127}$/)) throw new Error(`Invalid member profile id: ${item}`);
+    if (!seen.has(profileId)) {
+      seen.add(profileId);
+      memberProfileIds.push(profileId);
+    }
+  }
+  return memberProfileIds;
+}
+
+function parseSharedGroupIds(value: unknown, store: SQLiteMessageStore, identity: Identity): string[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) throw new Error('sharedGroupIds must be an array');
+  const sharedGroupIds: string[] = [];
+  const seen = new Set<string>();
+  for (const item of value) {
+    if (typeof item !== 'string') throw new Error('Invalid shared group id');
+    const groupId = normalizeGroupId(item);
+    const group = store.getGroup(groupId);
+    if (!group) throw new Error(`Unknown shared group: ${groupId}`);
+    if (!isGroupMember(identity, group)) throw new Error(`Shared group forbidden for this identity: ${groupId}`);
+    if (!seen.has(groupId)) {
+      seen.add(groupId);
+      sharedGroupIds.push(groupId);
+    }
+  }
+  return sharedGroupIds;
 }
 
 function buildGroupMessageMetadata(value: unknown, group: AgoraGroup): Record<string, unknown> {

@@ -72,7 +72,12 @@ export interface AgoraProject {
   name: string;
   description: string;
   status: ProjectStatus;
+  /** Owner identity. Private projects are visible only to this profile and admins. */
+  ownerProfileId: string;
+  /** Directly shared user/profile ids. The owner is always allowed even if omitted here. */
   memberProfileIds: string[];
+  /** Group ids whose members can access the project dynamically. */
+  sharedGroupIds: string[];
   createdAt: string;
   updatedAt: string;
   createdBy: Author;

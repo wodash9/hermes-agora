@@ -67,7 +67,7 @@ describe('client UI helpers', () => {
     await appendTaskDocument('change-me-dev-token', 'agora', 'task_1', 'QA listo', 'qa');
     await deleteProject('change-me-dev-token', 'agora');
 
-    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/projects', expect.objectContaining({ method: 'POST', body: JSON.stringify({ name: 'Agora', description: 'Kanban interno', memberProfileIds: ['daneel-cto'] }) }));
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/projects', expect.objectContaining({ method: 'POST', body: JSON.stringify({ name: 'Agora', description: 'Kanban interno', memberProfileIds: ['daneel-cto'], sharedGroupIds: [] }) }));
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/projects/agora/tasks', expect.objectContaining({ method: 'POST', body: JSON.stringify({ title: 'Crear tablero', status: 'backlog', assigneeProfileIds: ['daneel-cto'] }) }));
     expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/v1/projects/agora/tasks/task_1', expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'review' }) }));
     expect(fetchMock).toHaveBeenNthCalledWith(4, '/api/v1/projects/agora/tasks/task_1/documents', expect.objectContaining({ method: 'POST', body: JSON.stringify({ body: 'QA listo', kind: 'qa' }) }));

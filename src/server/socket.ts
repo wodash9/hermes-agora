@@ -34,7 +34,7 @@ export function attachAgoraSocket(httpServer: HttpServer, config: ServerConfig, 
   events.on('group:updated', (group) => {
     for (const socket of io.sockets.sockets.values()) {
       const identity = socket.data.identity as Identity | undefined;
-      if (identity && canSeeGroup(identity, group.memberProfileIds)) socket.join(groupRoom(group.id));
+      if (identity && canSeeGroup(identity, group)) socket.join(groupRoom(group.id));
       else socket.leave(groupRoom(group.id));
     }
   });
@@ -47,7 +47,7 @@ export function attachAgoraSocket(httpServer: HttpServer, config: ServerConfig, 
   events.on('project:updated', (project) => {
     for (const socket of io.sockets.sockets.values()) {
       const identity = socket.data.identity as Identity | undefined;
-      if (identity && canSeeProject(identity, project.memberProfileIds)) socket.join(projectRoom(project.id));
+      if (identity && canSeeProject(identity, project, store)) socket.join(projectRoom(project.id));
       else socket.leave(projectRoom(project.id));
     }
     io.to(projectRoom(project.id)).emit('project:updated', project);
@@ -71,23 +71,27 @@ export function attachAgoraSocket(httpServer: HttpServer, config: ServerConfig, 
 function visibleGroupsFor(identity: Identity | undefined, store: SQLiteMessageStore) {
   if (!identity) return [];
   const groups = store.listGroups().groups;
-  if (identity.type === 'human' || identity.scopes.includes('admin')) return groups;
-  return groups.filter((group) => group.memberProfileIds.includes(identity.profileId));
+  if (identity.scopes.includes('admin')) return groups;
+  return groups.filter((group) => canSeeGroup(identity, group));
 }
 
 function visibleProjectsFor(identity: Identity | undefined, store: SQLiteMessageStore) {
   if (!identity || !hasProjectReadScope(identity)) return [];
   const projects = store.listProjects().projects;
-  if (identity.type === 'human' || identity.scopes.includes('admin')) return projects;
-  return projects.filter((project) => project.memberProfileIds.includes(identity.profileId));
+  if (identity.scopes.includes('admin')) return projects;
+  return projects.filter((project) => canSeeProject(identity, project, store));
 }
 
-function canSeeGroup(identity: Identity, memberProfileIds: string[]): boolean {
-  return identity.type === 'human' || identity.scopes.includes('admin') || memberProfileIds.includes(identity.profileId);
+function canSeeGroup(identity: Identity, group: { createdBy: { profileId: string }; memberProfileIds: string[] }): boolean {
+  return identity.scopes.includes('admin') || group.createdBy.profileId === identity.profileId || group.memberProfileIds.includes(identity.profileId);
 }
 
-function canSeeProject(identity: Identity, memberProfileIds: string[]): boolean {
-  return hasProjectReadScope(identity) && (identity.type === 'human' || identity.scopes.includes('admin') || memberProfileIds.includes(identity.profileId));
+function canSeeProject(identity: Identity, project: { ownerProfileId: string; memberProfileIds: string[]; sharedGroupIds: string[] }, store: SQLiteMessageStore): boolean {
+  if (!hasProjectReadScope(identity)) return false;
+  return identity.scopes.includes('admin') || project.ownerProfileId === identity.profileId || project.memberProfileIds.includes(identity.profileId) || project.sharedGroupIds.some((groupId) => {
+    const group = store.getGroup(groupId);
+    return group ? canSeeGroup(identity, group) : false;
+  });
 }
 
 function hasProjectReadScope(identity: Identity): boolean {
