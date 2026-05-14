@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import type { AgoraGroup, AgoraMessage, AgoraProject, AgoraTask, Identity, KanbanStatus, ProfileStatus, TaskDocument } from '../shared/types';
-import { createClientAuthConfig, initKeycloak, isMockAllowed } from './auth';
+import { createClientAuthConfig, initKeycloak, isMockAllowed, logoutKeycloak } from './auth';
 import { appendTaskDocument, createGroup, createProject, createProjectTask, deleteGroup, deleteProject, fetchGroupMessages, fetchGroups, fetchIdentity, fetchMessages, fetchProfileStatuses, fetchProjectTasks, fetchProjects, fetchTaskDocuments, postGroupMessage, postMessage, updateGroup, updateProject, updateProjectTask, buildSocketAuth } from './api';
 import { ACTION_OPTIONS, DIRECTED_TARGET_ALL, applyComposerAction, buildRecipientOptions, buildTargetMetadata, toggleMemberSelection, type ComposerAction } from './uiState';
 import { scrollMessagesToLatest } from './scroll';
@@ -40,16 +40,45 @@ export function App() {
   const [isGroupAdminOpen, setIsGroupAdminOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoggedOut, setIsLoggedOut] = useState(false);
+
+  function startMockSession() {
+    setToken('change-me-dev-token');
+    setIdentity({ type: 'agent', profileId: 'seldon-ceo', displayName: 'Seldon', scopes: ['messages:read', 'messages:write', 'projects:read', 'projects:write', 'admin'], channels: ['general'] });
+    setIsLoggedOut(false);
+    setIsLoading(false);
+  }
+
+  function clearSessionState() {
+    setToken(null);
+    setIdentity(null);
+    setMessages([]);
+    setGroupMessages({});
+    setProfiles([]);
+    setGroups([]);
+    setProjects([]);
+    setProjectTasks({});
+    setTaskDocuments({});
+    setActiveView('chat');
+    setActiveGroupId(null);
+    setActiveProjectId(null);
+    setDraft('');
+    setComposerAction('NONE');
+    setComposerTargetProfileId(DIRECTED_TARGET_ALL);
+    setIsGroupAdminOpen(false);
+  }
 
   useEffect(() => {
     let cancelled = false;
     async function boot() {
       try {
+        if (isLoggedOut) {
+          setIsLoading(false);
+          return;
+        }
         if (authConfig.mode === 'mock') {
           if (!isMockAllowed()) throw new Error('Mock auth is local-only');
-          setToken('change-me-dev-token');
-          setIdentity({ type: 'agent', profileId: 'seldon-ceo', displayName: 'Seldon', scopes: ['messages:read', 'messages:write', 'projects:read', 'projects:write', 'admin'], channels: ['general'] });
-          setIsLoading(false);
+          startMockSession();
           return;
         }
         const kc = await initKeycloak(authConfig);
@@ -65,7 +94,7 @@ export function App() {
     }
     boot();
     return () => { cancelled = true; };
-  }, [authConfig]);
+  }, [authConfig, isLoggedOut]);
 
   useEffect(() => {
     if (!token) return;
@@ -260,6 +289,34 @@ export function App() {
     }
   }
 
+  async function handleLogin() {
+    try {
+      setError(null);
+      setIsLoading(true);
+      if (authConfig.mode === 'mock') {
+        if (!isMockAllowed()) throw new Error('Mock auth is local-only');
+        startMockSession();
+        return;
+      }
+      const kc = await initKeycloak(authConfig);
+      await kc?.login();
+    } catch (err) {
+      setError((err as Error).message);
+      setIsLoading(false);
+    }
+  }
+
+  async function handleLogout() {
+    try {
+      clearSessionState();
+      setIsLoggedOut(true);
+      setIsLoading(false);
+      await logoutKeycloak(authConfig);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
   const activeGroup = groups.find((group) => group.id === activeGroupId) ?? null;
   const activeProject = projects.find((project) => project.id === activeProjectId) ?? null;
   const activeProjectTasks = activeProjectId ? projectTasks[activeProjectId] ?? [] : [];
@@ -299,7 +356,7 @@ export function App() {
 
   if (isLoading) return <main className="center-card"><h1>Hermes Agora</h1><p>Inicializando hub interno…</p></main>;
   if (error) return <main className="center-card error"><h1>Hermes Agora</h1><p>{error}</p></main>;
-  if (!token) return <LoginScreen onLogin={() => void initKeycloak(authConfig).then((kc) => kc?.login())} />;
+  if (!token) return <LoginScreen onLogin={() => void handleLogin()} />;
 
   return (
     <main className="shell">
@@ -328,10 +385,12 @@ export function App() {
           {projects.length === 0 && <p>No hay proyectos todavía.</p>}
         </section>
         <button className="mobile-admin-toggle" onClick={() => setIsGroupAdminOpen((current) => !current)}>{isGroupAdminOpen ? 'Cerrar' : 'Gestionar grupos'}</button>
+        <button type="button" className="mobile-logout-button" aria-label="Cerrar sesión" onClick={() => void handleLogout()}>Salir</button>
         <section className="identity">
           <small>Conectado como</small>
           <strong>{identity?.displayName ?? 'Operador'}</strong>
           <span>{identity?.type ?? 'human'}</span>
+          <button type="button" className="logout-button" aria-label="Cerrar sesión" onClick={() => void handleLogout()}>Cerrar sesión</button>
         </section>
       </aside>
       {activeView === 'monitor' ? <MonitorScreen profiles={profiles} /> : activeView === 'projects' ? (

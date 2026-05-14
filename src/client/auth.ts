@@ -39,3 +39,21 @@ export function resetKeycloakForRetry(): void {
   keycloak = null;
   initPromise = null;
 }
+
+export function defaultPostLogoutRedirectUri(currentHref = window.location.href): string {
+  const url = new URL(currentHref);
+  return `${url.origin}/`;
+}
+
+export async function logoutKeycloak(config: ClientAuthConfig, redirectUri = defaultPostLogoutRedirectUri()): Promise<void> {
+  if (config.mode === 'mock') {
+    resetKeycloakForRetry();
+    return;
+  }
+  const kc = keycloak ?? await initKeycloak(config);
+  if (kc?.authenticated) {
+    await kc.logout({ redirectUri });
+    return;
+  }
+  resetKeycloakForRetry();
+}

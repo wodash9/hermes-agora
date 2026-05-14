@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ACTION_OPTIONS, DIRECTED_TARGET_ALL, applyComposerAction, buildRecipientOptions, buildTargetMetadata, toggleMemberSelection } from '../src/client/uiState';
 import { appendTaskDocument, buildAuthHeaders, buildSocketAuth, createProject, createProjectTask, deleteProject, postGroupMessage, updateProjectTask } from '../src/client/api';
 import { scrollMessagesToLatest } from '../src/client/scroll';
+import { defaultPostLogoutRedirectUri } from '../src/client/auth';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -79,6 +80,11 @@ describe('client UI helpers', () => {
     expect(buildSocketAuth('change-me-dev-token')).toEqual({ token: 'change-me-dev-token', profileId: 'seldon-ceo' });
     expect(buildAuthHeaders('real-keycloak-token')).toEqual({ Authorization: 'Bearer real-keycloak-token' });
     expect(buildSocketAuth('real-keycloak-token')).toEqual({ token: 'real-keycloak-token' });
+  });
+
+  it('builds a safe post-logout redirect back to the Agora origin root', () => {
+    expect(defaultPostLogoutRedirectUri('https://agora.etharlia.com/projects')).toBe('https://agora.etharlia.com/');
+    expect(defaultPostLogoutRedirectUri('http://127.0.0.1:5179/projects?tab=access')).toBe('http://127.0.0.1:5179/');
   });
 
   it('scrolls the chat viewport to the latest message after message changes', () => {
@@ -179,5 +185,14 @@ describe('mobile-responsive Agora layout CSS', () => {
     expect(appSource).toContain('Resumen de acceso');
     expect(css).toContain('.project-tabs');
     expect(css).toContain('.projects-screen { display: grid; grid-template-rows: auto auto auto minmax(0, 1fr);');
+  });
+
+  it('shows an explicit logout action in the signed-in identity panel', () => {
+    const appSource = readFileSync(join(process.cwd(), 'src/client/App.tsx'), 'utf8');
+    expect(appSource).toContain('handleLogout');
+    expect(appSource).toContain('logoutKeycloak(authConfig');
+    expect(appSource).toContain('aria-label="Cerrar sesión"');
+    expect(appSource).toContain('Cerrar sesión');
+    expect(css).toContain('.logout-button');
   });
 });
