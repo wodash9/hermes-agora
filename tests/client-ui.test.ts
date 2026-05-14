@@ -166,9 +166,18 @@ describe('mobile-responsive Agora layout CSS', () => {
   });
 
   it('keeps the group admin panel out of document flow on tablet and mobile widths', () => {
-    expect(css).toContain('@media (max-width: 1100px)');
-    expect(css).toContain('.group-admin { position: fixed; right: 0; top: 0; bottom: 0;');
+    expect(css).toContain('.group-admin { position: fixed; right: 0; top: 0; bottom: 0; z-index: 30;');
     expect(css).toContain('.group-admin.collapsed { display: none; }');
-    expect(css).toContain('.mobile-admin-toggle { display: block; }');
+    expect(css).toContain('.group-admin { position: fixed; left: 0; right: 0; top: auto; bottom: 0;');
+  });
+
+  it('uses progressive disclosure for project UX instead of showing all project forms beside the kanban', () => {
+    const appSource = readFileSync(join(process.cwd(), 'src/client/App.tsx'), 'utf8');
+    expect(appSource).toContain("type ProjectPanel = 'board' | 'access' | 'settings'");
+    expect(appSource).toContain('project-tabs');
+    expect(appSource).toContain('project-workspace');
+    expect(appSource).toContain('Resumen de acceso');
+    expect(css).toContain('.project-tabs');
+    expect(css).toContain('.projects-screen { display: grid; grid-template-rows: auto auto auto minmax(0, 1fr);');
   });
 });

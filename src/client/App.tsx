@@ -8,6 +8,7 @@ import { scrollMessagesToLatest } from './scroll';
 import './styles.css';
 
 type View = 'chat' | 'monitor' | 'group' | 'projects';
+type ProjectPanel = 'board' | 'access' | 'settings';
 
 const KANBAN_COLUMNS: Array<{ status: KanbanStatus; label: string }> = [
   { status: 'backlog', label: 'Backlog' },
@@ -326,7 +327,7 @@ export function App() {
           {projects.map((project) => <button key={project.id} className={`channel group-channel ${activeProjectId === project.id ? 'active' : ''}`} onClick={() => { setActiveView('projects'); setActiveProjectId(project.id); setActiveGroupId(null); }}>Proyecto: {project.name}</button>)}
           {projects.length === 0 && <p>No hay proyectos todavía.</p>}
         </section>
-        <button className="mobile-admin-toggle" onClick={() => setIsGroupAdminOpen((current) => !current)}>{isGroupAdminOpen ? 'Cerrar' : 'Grupos'}</button>
+        <button className="mobile-admin-toggle" onClick={() => setIsGroupAdminOpen((current) => !current)}>{isGroupAdminOpen ? 'Cerrar' : 'Gestionar grupos'}</button>
         <section className="identity">
           <small>Conectado como</small>
           <strong>{identity?.displayName ?? 'Operador'}</strong>
@@ -405,6 +406,7 @@ function ProjectsScreen({ projects, groups, profiles, identity, activeProject, t
   onAppendDocument: (projectId: string, task: AgoraTask, body: string) => Promise<void>;
   onLoadDocuments: (projectId: string, taskId: string) => Promise<void>;
 }) {
+  const [projectPanel, setProjectPanel] = useState<ProjectPanel>('board');
   const [projectName, setProjectName] = useState('');
   const [projectDescription, setProjectDescription] = useState('');
   const [projectMembers, setProjectMembers] = useState<string[]>([]);
@@ -421,6 +423,7 @@ function ProjectsScreen({ projects, groups, profiles, identity, activeProject, t
     setProjectMembers(activeProject?.memberProfileIds ?? []);
     setProjectSharedGroupIds(activeProject?.sharedGroupIds ?? []);
     setTaskAssignees([]);
+    if (!activeProject) setProjectPanel('settings');
   }, [activeProject]);
 
   async function saveProject(event: FormEvent) {
@@ -468,64 +471,132 @@ function ProjectsScreen({ projects, groups, profiles, identity, activeProject, t
 
   const memberNames = new Map(profiles.map((profile) => [profile.profileId, profile.displayName]));
   if (identity) memberNames.set(identity.profileId, identity.displayName);
+  const groupNames = new Map(groups.map((group) => [group.id, group.name]));
   const knownProjectMembers = identity && !profiles.some((profile) => profile.profileId === identity.profileId)
     ? [{ profileId: identity.profileId, displayName: `${identity.displayName} (yo)` }, ...profiles]
     : profiles;
+  const selectableProjectMembers = knownProjectMembers.filter((profile) => profile.profileId !== (activeProject?.ownerProfileId ?? identity?.profileId));
+  const ownerName = activeProject ? memberNames.get(activeProject.ownerProfileId) ?? activeProject.ownerProfileId : identity?.displayName ?? 'tú';
+  const directMemberLabels = activeProject?.memberProfileIds.map((profileId) => memberNames.get(profileId) ?? profileId) ?? [];
+  const sharedGroupLabels = activeProject?.sharedGroupIds.map((groupId) => groupNames.get(groupId) ?? groupId) ?? [];
+  const totalTasks = tasks.length;
+  const doneTasks = tasks.filter((task) => task.status === 'done').length;
+  const blockedTasks = tasks.filter((task) => task.status === 'blocked').length;
+  const inFlightTasks = tasks.filter((task) => task.status === 'todo' || task.status === 'in_progress' || task.status === 'review').length;
+  const groupCountLabel = `${sharedGroupLabels.length} ${sharedGroupLabels.length === 1 ? 'grupo' : 'grupos'}`;
+  const accessLabel = activeProject
+    ? directMemberLabels.length || sharedGroupLabels.length
+      ? `${directMemberLabels.length} perfiles · ${groupCountLabel}`
+      : 'Privado'
+    : 'Privado por defecto';
+  const assignableProfileIds = activeProject ? [activeProject.ownerProfileId, ...activeProject.memberProfileIds].filter((profileId, index, all) => all.indexOf(profileId) === index) : [];
+
+  function startNewProject() {
+    onSelectProject(null);
+    setProjectPanel('settings');
+    setProjectName('');
+    setProjectDescription('');
+    setProjectMembers([]);
+    setProjectSharedGroupIds([]);
+  }
+
+  const projectForm = (mode: 'settings' | 'access') => <form className={`project-form ${mode === 'access' ? 'access-form' : ''}`} onSubmit={saveProject}>
+    {mode === 'settings' && <>
+      <div className="section-heading">
+        <span>Detalles</span>
+        <h2>{activeProject ? 'Información del proyecto' : 'Nuevo proyecto privado'}</h2>
+        <p>Define un nombre claro y un objetivo operativo. La privacidad se gestiona en la pestaña Acceso.</p>
+      </div>
+      <label>Nombre<input value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder="Ej. Rediseño Hermes Agora" /></label>
+      <label>Descripción<textarea value={projectDescription} onChange={(event) => setProjectDescription(event.target.value)} placeholder="Objetivo, alcance y criterio de cierre" rows={5} /></label>
+    </>}
+    {mode === 'access' && <>
+      <div className="section-heading">
+        <span>Acceso</span>
+        <h2>Usuarios, perfiles y grupos</h2>
+        <p>Si no seleccionas perfiles ni grupos, solo {ownerName} podrá acceder al proyecto.</p>
+      </div>
+      <div className="access-summary-card">
+        <span>Propietario</span><strong>{ownerName}</strong>
+        <span>Visibilidad</span><strong>{accessLabel}</strong>
+      </div>
+      <fieldset>
+        <legend>Compartir con usuarios/perfiles</legend>
+        <div className="choice-list">
+          {selectableProjectMembers.map((profile) => <label key={profile.profileId} className="checkbox-row">
+            <input type="checkbox" checked={projectMembers.includes(profile.profileId)} onChange={(event) => setProjectMembers((current) => toggleMemberSelection(current, profile.profileId, event.target.checked))} />
+            <span>{profile.displayName}</span><code>{profile.profileId}</code>
+          </label>)}
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Compartir con grupos</legend>
+        <div className="choice-list">
+          {groups.map((group) => <label key={group.id} className="checkbox-row">
+            <input type="checkbox" checked={projectSharedGroupIds.includes(group.id)} onChange={(event) => setProjectSharedGroupIds((current) => toggleMemberSelection(current, group.id, event.target.checked))} />
+            <span>{group.name}</span><code>{group.memberProfileIds.length} miembros</code>
+          </label>)}
+          {groups.length === 0 && <p className="form-hint">No hay grupos disponibles.</p>}
+        </div>
+      </fieldset>
+    </>}
+    <div className="form-actions">
+      <button disabled={busy || !projectName.trim()}>{busy ? 'Guardando…' : activeProject ? 'Guardar cambios' : 'Crear proyecto'}</button>
+      {activeProject && mode === 'settings' && <button className="danger" type="button" disabled={busy} onClick={() => { if (window.confirm(`Eliminar proyecto ${activeProject.name} y todas sus tareas/documentos?`)) void onDeleteProject(activeProject.id); }}>Eliminar proyecto</button>}
+    </div>
+  </form>;
+
   return <section className="projects-screen">
     <header className="chat-header project-header">
-      <div>
-        <h1>Proyectos</h1>
-        <p>Kanban operativo con proyectos privados por defecto y compartición por usuarios/perfiles o grupos.</p>
+      <div className="project-title-block">
+        <small>Hermes Agora / Proyectos</small>
+        <h1>{activeProject?.name ?? 'Nuevo proyecto'}</h1>
+        <p>Kanban operativo con proyectos privados por defecto. Comparte solo con usuarios o grupos cuando haga falta.</p>
       </div>
-      <label className="project-select">Proyecto activo
-        <select value={activeProject?.id ?? ''} onChange={(event) => onSelectProject(event.target.value || null)}>
-          <option value="">Selecciona proyecto</option>
-          {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
-        </select>
-      </label>
+      <div className="project-header-actions">
+        <label className="project-select">Proyecto activo
+          <select value={activeProject?.id ?? ''} onChange={(event) => onSelectProject(event.target.value || null)}>
+            <option value="">Selecciona proyecto</option>
+            {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+          </select>
+        </label>
+        <button type="button" className="secondary-action" onClick={startNewProject}>Nuevo proyecto</button>
+      </div>
     </header>
-    <div className="projects-layout">
-      <aside className="project-admin-card">
-        <h2>{activeProject ? 'Proyecto activo' : 'Nuevo proyecto'}</h2>
-        <form onSubmit={saveProject}>
-          <label>Nombre<input value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder="Ej. Hermes Agora" /></label>
-          <label>Descripción<textarea value={projectDescription} onChange={(event) => setProjectDescription(event.target.value)} placeholder="Objetivo, alcance y criterio de cierre" rows={3} /></label>
-          <fieldset>
-            <legend>Compartir con usuarios/perfiles</legend>
-            <p className="form-hint">Si no marcas nadie ni ningún grupo, el proyecto queda privado para el propietario.</p>
-            {knownProjectMembers.map((profile) => <label key={profile.profileId} className="checkbox-row">
-              <input type="checkbox" checked={projectMembers.includes(profile.profileId)} onChange={(event) => setProjectMembers((current) => toggleMemberSelection(current, profile.profileId, event.target.checked))} />
-              <span>{profile.displayName}</span><code>{profile.profileId}</code>
-            </label>)}
-          </fieldset>
-          <fieldset>
-            <legend>Compartir con grupos</legend>
-            {groups.map((group) => <label key={group.id} className="checkbox-row">
-              <input type="checkbox" checked={projectSharedGroupIds.includes(group.id)} onChange={(event) => setProjectSharedGroupIds((current) => toggleMemberSelection(current, group.id, event.target.checked))} />
-              <span>{group.name}</span><code>{group.id}</code>
-            </label>)}
-            {groups.length === 0 && <p className="form-hint">No hay grupos disponibles.</p>}
-          </fieldset>
-          <button disabled={busy || !projectName.trim()}>{activeProject ? 'Guardar proyecto' : 'Crear proyecto'}</button>
-          {activeProject && <button className="danger" type="button" disabled={busy} onClick={() => { if (window.confirm(`Eliminar proyecto ${activeProject.name} y todas sus tareas/documentos?`)) void onDeleteProject(activeProject.id); }}>Eliminar proyecto</button>}
-        </form>
-      </aside>
-      <section className="kanban-area">
+
+    <div className="project-overview">
+      <article><span>Tareas</span><strong>{totalTasks}</strong><small>{inFlightTasks} activas</small></article>
+      <article><span>Bloqueos</span><strong>{blockedTasks}</strong><small>{blockedTasks ? 'requiere atención' : 'sin bloqueos'}</small></article>
+      <article><span>Completadas</span><strong>{doneTasks}</strong><small>{totalTasks ? `${Math.round((doneTasks / totalTasks) * 100)}% cerrado` : 'sin histórico'}</small></article>
+      <article><span>Visibilidad</span><strong>{accessLabel}</strong><small>Owner: {ownerName}</small></article>
+    </div>
+
+    <nav className="project-tabs" aria-label="Secciones del proyecto">
+      <button type="button" className={projectPanel === 'board' ? 'active' : ''} disabled={!activeProject} onClick={() => setProjectPanel('board')}>Tablero</button>
+      <button type="button" className={projectPanel === 'access' ? 'active' : ''} onClick={() => setProjectPanel('access')}>Acceso</button>
+      <button type="button" className={projectPanel === 'settings' ? 'active' : ''} onClick={() => setProjectPanel('settings')}>Ajustes</button>
+    </nav>
+
+    <div className="project-workspace">
+      {projectPanel === 'settings' && <section className="project-panel settings-panel">{projectForm('settings')}</section>}
+      {projectPanel === 'access' && <section className="project-panel access-panel">{projectForm('access')}</section>}
+      {projectPanel === 'board' && <section className="project-panel board-panel">
         {activeProject ? <>
-          <div className="project-access-summary">
-            <span>Propietario: {memberNames.get(activeProject.ownerProfileId) ?? activeProject.ownerProfileId}</span>
-            <span>Usuarios/perfiles: {activeProject.memberProfileIds.length || 'privado'}</span>
-            <span>Grupos: {activeProject.sharedGroupIds.length || 'sin grupos'}</span>
+          <div className="project-access-summary" aria-label="Resumen de acceso">
+            <span>Propietario: {ownerName}</span>
+            <span>{directMemberLabels.length ? `Usuarios/perfiles: ${directMemberLabels.join(', ')}` : 'Privado para owner'}</span>
+            <span>{sharedGroupLabels.length ? `Grupos: ${sharedGroupLabels.join(', ')}` : 'Sin grupos compartidos'}</span>
           </div>
           <form className="task-create-form" onSubmit={createTask}>
-            <div>
-              <strong>Nueva tarea</strong>
-              <p>Se crea en Backlog y los agentes asignados pueden moverla o documentarla por API.</p>
+            <div className="section-heading compact">
+              <span>Quick add</span>
+              <h2>Nueva tarea</h2>
+              <p>Se crea en Backlog; luego se mueve en el tablero.</p>
             </div>
             <input value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} placeholder="Título de tarea" />
             <textarea value={taskDescription} onChange={(event) => setTaskDescription(event.target.value)} placeholder="Contexto y criterio de cierre" rows={2} />
             <div className="assignee-grid">
-              {[activeProject.ownerProfileId, ...activeProject.memberProfileIds].filter((profileId, index, all) => all.indexOf(profileId) === index).map((profileId) => <label key={profileId} className="assignee-chip">
+              {assignableProfileIds.map((profileId) => <label key={profileId} className="assignee-chip">
                 <input type="checkbox" checked={taskAssignees.includes(profileId)} onChange={(event) => setTaskAssignees((current) => toggleMemberSelection(current, profileId, event.target.checked))} />
                 {memberNames.get(profileId) ?? profileId}
               </label>)}
@@ -535,7 +606,7 @@ function ProjectsScreen({ projects, groups, profiles, identity, activeProject, t
           <div className="kanban-board">
             {KANBAN_COLUMNS.map((column) => {
               const columnTasks = tasks.filter((task) => task.status === column.status);
-              return <section key={column.status} className="kanban-column">
+              return <section key={column.status} className={`kanban-column status-${column.status}`}>
                 <h3>{column.label}<span>{columnTasks.length}</span></h3>
                 {columnTasks.map((task) => <article key={task.id} className="task-card">
                   <div className="task-card-head"><strong>{task.title}</strong><select value={task.status} onChange={(event) => void onMoveTask(activeProject.id, task, event.target.value as KanbanStatus)}>
@@ -556,8 +627,8 @@ function ProjectsScreen({ projects, groups, profiles, identity, activeProject, t
               </section>;
             })}
           </div>
-        </> : <div className="empty project-empty">Crea o selecciona un proyecto para abrir su kanban.</div>}
-      </section>
+        </> : <div className="empty project-empty"><strong>No hay proyecto activo.</strong><p>Crea uno desde Ajustes; será privado por defecto hasta que añadas acceso.</p><button type="button" onClick={() => setProjectPanel('settings')}>Crear proyecto</button></div>}
+      </section>}
     </div>
   </section>;
 }
