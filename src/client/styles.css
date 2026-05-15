@@ -172,17 +172,31 @@ dd { margin: 0; color: #e2e8f0; font-size: 0.88rem; }
 .project-access-summary { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .project-access-summary span { border: 1px solid rgba(59, 130, 246, 0.26); border-radius: 999px; padding: 0.42rem 0.66rem; background: rgba(59, 130, 246, 0.08); color: #dbeafe; font-size: 0.84rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .task-modal-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: start center; padding: clamp(0.75rem, 3vw, 2rem); background: rgba(2, 6, 23, 0.72); backdrop-filter: blur(8px); overflow-y: auto; }
-.task-modal { width: min(980px, 100%); border: 1px solid var(--border); border-radius: 18px; background: #111827; box-shadow: 0 28px 80px rgba(0, 0, 0, 0.5); display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr); gap: 0; overflow: hidden; }
+.task-modal { width: min(1120px, 100%); border: 1px solid var(--border); border-radius: 18px; background: #111827; box-shadow: 0 28px 80px rgba(0, 0, 0, 0.5); display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(300px, 0.95fr); gap: 0; overflow: hidden; }
 .task-modal-header { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; padding: 1rem 1.1rem; border-bottom: 1px solid var(--border); background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.94)); }
 .task-modal-header h2 { margin: 0.2rem 0 0; color: #f8fafc; font-size: clamp(1.2rem, 2vw, 1.7rem); letter-spacing: -0.035em; }
 .task-modal-header p { margin: 0.32rem 0 0; color: var(--muted); }
 .task-modal-kicker, .markdown-preview span { color: #93c5fd; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.72rem; font-weight: 700; }
-.task-spec-form, .task-modal-docs { display: grid; align-content: start; gap: 0.85rem; padding: 1rem; }
+.task-spec-form, .task-modal-docs, .whiteboard-panel { display: grid; align-content: start; gap: 0.85rem; padding: 1rem; }
 .task-spec-form { border-right: 1px solid var(--border); }
-.task-spec-form label { display: grid; gap: 0.42rem; color: var(--muted); }
+.task-modal-docs { grid-column: 1 / -1; border-top: 1px solid var(--border); }
+.task-spec-form label, .whiteboard-panel label { display: grid; gap: 0.42rem; color: var(--muted); }
 .markdown-editor { min-height: 280px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; line-height: 1.55; }
 .markdown-preview { border: 1px solid var(--border-soft); border-radius: 14px; padding: 0.85rem; background: rgba(15, 23, 42, 0.7); display: grid; gap: 0.45rem; }
 .markdown-preview pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: #cbd5e1; font-family: inherit; line-height: 1.5; }
+.whiteboard-panel { background: rgba(15, 23, 42, 0.38); }
+.whiteboard-panel .section-heading p { font-size: 0.84rem; }
+.whiteboard-toolbar { display: grid; grid-template-columns: minmax(92px, 0.8fr) minmax(140px, 1fr) auto auto; gap: 0.5rem; align-items: end; }
+.whiteboard-toolbar label { font-size: 0.78rem; }
+.whiteboard-toolbar input[type="color"] { min-height: 42px; padding: 0.28rem; }
+.whiteboard-toolbar input[type="range"] { accent-color: var(--accent); padding-inline: 0; }
+.whiteboard-toolbar button { padding: 0.58rem 0.68rem; }
+.whiteboard-canvas { width: 100%; aspect-ratio: 800 / 420; border: 1px solid rgba(96, 165, 250, 0.34); border-radius: 18px; background: #020617; touch-action: none; cursor: crosshair; }
+.whiteboard-canvas rect { fill: #020617; }
+.whiteboard-grid-line { stroke: rgba(148, 163, 184, 0.13); stroke-width: 1; pointer-events: none; }
+.whiteboard-canvas path:not(.whiteboard-grid-line) { pointer-events: none; filter: drop-shadow(0 0 4px rgba(147, 197, 253, 0.16)); }
+.whiteboard-panel .form-actions { align-items: center; }
+.whiteboard-panel .form-actions small { color: var(--muted); }
 .task-modal-docs .task-documents { max-height: 300px; overflow-y: auto; }
 .task-modal-docs button { width: 100%; }
 @media (max-width: 1100px) {
@@ -196,6 +210,7 @@ dd { margin: 0; color: #e2e8f0; font-size: 0.88rem; }
   .task-create-form { grid-template-columns: 1fr 1fr; }
   .task-modal { grid-template-columns: 1fr; }
   .task-spec-form { border-right: 0; border-bottom: 1px solid var(--border); }
+  .whiteboard-panel { border-bottom: 1px solid var(--border); }
 }
 @media (max-width: 760px) {
   body { height: 100dvh; min-height: 100dvh; }
@@ -253,4 +268,6 @@ dd { margin: 0; color: #e2e8f0; font-size: 0.88rem; }
   .task-modal { width: 100%; min-height: 100dvh; border-radius: 0; border-left: 0; border-right: 0; }
   .task-modal-header { position: sticky; top: 0; z-index: 1; }
   .markdown-editor { min-height: 220px; }
+  .whiteboard-toolbar { grid-template-columns: 1fr 1fr; }
+  .whiteboard-canvas { border-radius: 12px; }
 }

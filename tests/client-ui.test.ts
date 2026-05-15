@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ACTION_OPTIONS, DIRECTED_TARGET_ALL, applyComposerAction, buildRecipientOptions, buildTargetMetadata, toggleMemberSelection } from '../src/client/uiState';
-import { appendTaskDocument, buildAuthHeaders, buildSocketAuth, createProject, createProjectTask, deleteProject, postGroupMessage, updateProjectTask } from '../src/client/api';
+import { appendTaskDocument, buildAuthHeaders, buildSocketAuth, createProject, createProjectTask, deleteProject, fetchTaskWhiteboard, postGroupMessage, updateProjectTask, updateTaskWhiteboard } from '../src/client/api';
 import { scrollMessagesToLatest } from '../src/client/scroll';
 import { defaultPostLogoutRedirectUri } from '../src/client/auth';
 
@@ -73,6 +73,20 @@ describe('client UI helpers', () => {
     expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/v1/projects/agora/tasks/task_1', expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'review' }) }));
     expect(fetchMock).toHaveBeenNthCalledWith(4, '/api/v1/projects/agora/tasks/task_1/documents', expect.objectContaining({ method: 'POST', body: JSON.stringify({ body: 'QA listo', kind: 'qa' }) }));
     expect(fetchMock).toHaveBeenNthCalledWith(5, '/api/v1/projects/agora', expect.objectContaining({ method: 'DELETE' }));
+  });
+
+  it('serializes task whiteboard loading and saving for card sketches', async () => {
+    const strokes = [{ id: 'stroke_1', color: '#93c5fd', size: 3, points: [{ x: 10, y: 12 }, { x: 28, y: 32 }] }];
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true, json: async () => ({ taskId: 'task_1', title: 'Esbozo', strokes }) } as Response);
+
+    await fetchTaskWhiteboard('change-me-dev-token', 'agora', 'task_1');
+    await updateTaskWhiteboard('change-me-dev-token', 'agora', 'task_1', { title: 'Flujo UI', strokes });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/projects/agora/tasks/task_1/whiteboard', expect.objectContaining({ method: 'GET' }));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/projects/agora/tasks/task_1/whiteboard', expect.objectContaining({
+      method: 'PATCH',
+      body: JSON.stringify({ title: 'Flujo UI', strokes })
+    }));
   });
 
   it('adds mock profile identity to REST and socket auth only for the local mock token', () => {
@@ -198,6 +212,19 @@ describe('mobile-responsive Agora layout CSS', () => {
     expect(appSource).not.toContain('{task.description && <p>{task.description}</p>}');
     expect(css).toContain('.task-modal-backdrop');
     expect(css).toContain('.task-card { width: 100%; text-align: left;');
+  });
+
+  it('adds an assigned whiteboard sketch area inside each card modal', () => {
+    const appSource = readFileSync(join(process.cwd(), 'src/client/App.tsx'), 'utf8');
+    expect(appSource).toContain('TaskWhiteboardSketch');
+    expect(appSource).toContain('taskWhiteboards');
+    expect(appSource).toContain('onLoadWhiteboard');
+    expect(appSource).toContain('onSaveWhiteboard');
+    expect(appSource).toContain('Guardar whiteboard');
+    expect(appSource).toContain('viewBox="0 0 800 420"');
+    expect(css).toContain('pointer-events');
+    expect(css).toContain('.whiteboard-panel');
+    expect(css).toContain('.whiteboard-canvas');
   });
 
   it('shows an explicit logout action in the signed-in identity panel', () => {

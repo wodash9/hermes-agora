@@ -1,4 +1,4 @@
-import type { AgoraGroup, AgoraMessage, AgoraProject, AgoraTask, GroupListResponse, Identity, KanbanStatus, MessageListResponse, ProfileStatusResponse, ProjectListResponse, TaskDocument, TaskDocumentKind, TaskDocumentListResponse, TaskListResponse } from '../shared/types';
+import type { AgoraGroup, AgoraMessage, AgoraProject, AgoraTask, GroupListResponse, Identity, KanbanStatus, MessageListResponse, ProfileStatusResponse, ProjectListResponse, TaskDocument, TaskDocumentKind, TaskDocumentListResponse, TaskListResponse, TaskWhiteboard, WhiteboardStroke } from '../shared/types';
 
 export const MOCK_DEV_TOKEN = 'change-me-dev-token';
 export const MOCK_DEV_PROFILE_ID = 'seldon-ceo';
@@ -146,6 +146,25 @@ export async function updateProjectTask(token: string, projectId: string, taskId
 export async function fetchTaskDocuments(token: string, projectId: string, taskId: string): Promise<TaskDocumentListResponse> {
   const response = await fetch(`/api/v1/projects/${encodeURIComponent(projectId)}/tasks/${encodeURIComponent(taskId)}/documents`, { headers: buildAuthHeaders(token) });
   if (!response.ok) throw new Error(`Task documents failed: ${response.status}`);
+  return response.json();
+}
+
+export async function fetchTaskWhiteboard(token: string, projectId: string, taskId: string): Promise<TaskWhiteboard> {
+  const response = await fetch(`/api/v1/projects/${encodeURIComponent(projectId)}/tasks/${encodeURIComponent(taskId)}/whiteboard`, {
+    method: 'GET',
+    headers: buildAuthHeaders(token)
+  });
+  if (!response.ok) throw new Error(`Task whiteboard failed: ${response.status}`);
+  return response.json();
+}
+
+export async function updateTaskWhiteboard(token: string, projectId: string, taskId: string, input: { title?: string; strokes: WhiteboardStroke[] }): Promise<TaskWhiteboard> {
+  const response = await fetch(`/api/v1/projects/${encodeURIComponent(projectId)}/tasks/${encodeURIComponent(taskId)}/whiteboard`, {
+    method: 'PATCH',
+    headers: buildJsonHeaders(token),
+    body: JSON.stringify(input)
+  });
+  if (!response.ok) throw new Error(`Update task whiteboard failed: ${response.status}`);
   return response.json();
 }
 

@@ -65,6 +65,10 @@ export function attachAgoraSocket(httpServer: HttpServer, config: ServerConfig, 
     io.to(projectRoom(payload.task.projectId)).emit('task:documented', payload);
   });
 
+  events.on('task:whiteboard-updated', (payload) => {
+    io.to(projectRoom(payload.task.projectId)).emit('task:whiteboard-updated', payload);
+  });
+
   return io;
 }
 

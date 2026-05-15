@@ -5,7 +5,7 @@ import type { ServerConfig } from './config.js';
 import { requireIdentity, requireScope, type AuthenticatedRequest } from './auth.js';
 import { SQLiteMessageStore, normalizeChannel, normalizeGroupId, normalizeProjectId, parseKanbanStatus, parseProfilePresence, parseProjectStatus, parseTaskDocumentKind } from './store.js';
 import { canAccessChannel } from './auth.js';
-import type { AgoraGroup, AgoraMessage, AgoraProject, AgoraTask, Identity, TaskDocument } from '../shared/types.js';
+import type { AgoraGroup, AgoraMessage, AgoraProject, AgoraTask, Identity, TaskDocument, TaskWhiteboard, WhiteboardStroke } from '../shared/types.js';
 
 export interface AgoraEvents {
   on(event: 'message:new', listener: (message: AgoraMessage) => void): this;
@@ -20,6 +20,8 @@ export interface AgoraEvents {
   emit(event: 'task:updated', task: AgoraTask): boolean;
   on(event: 'task:documented', listener: (payload: { task: AgoraTask; document: TaskDocument }) => void): this;
   emit(event: 'task:documented', payload: { task: AgoraTask; document: TaskDocument }): boolean;
+  on(event: 'task:whiteboard-updated', listener: (payload: { task: AgoraTask; whiteboard: TaskWhiteboard }) => void): this;
+  emit(event: 'task:whiteboard-updated', payload: { task: AgoraTask; whiteboard: TaskWhiteboard }): boolean;
 }
 
 export interface CreateAgoraAppOptions {
@@ -39,7 +41,7 @@ export async function createAgoraApp({ config, store }: CreateAgoraAppOptions) {
     },
     credentials: true
   }));
-  app.use(express.json({ limit: '32kb' }));
+  app.use(express.json({ limit: '512kb' }));
 
   app.get('/health', (_req, res) => res.json({ ok: true, service: 'hermes-agora', version: '0.1.0' }));
 
@@ -322,6 +324,32 @@ export async function createAgoraApp({ config, store }: CreateAgoraAppOptions) {
     }
   });
 
+  app.get('/api/v1/projects/:projectId/tasks/:taskId/whiteboard', auth, requireScope('projects:read'), (req: AuthenticatedRequest, res) => {
+    try {
+      const project = requireProjectAccess(store, req.identity!, String(req.params.projectId));
+      const existing = store.getTaskWhiteboard(project.id, String(req.params.taskId));
+      res.json(existing ?? store.defaultTaskWhiteboard(project.id, String(req.params.taskId)));
+    } catch (error) {
+      res.status(projectAccessStatus(error as Error)).json({ error: (error as Error).message });
+    }
+  });
+
+  app.patch('/api/v1/projects/:projectId/tasks/:taskId/whiteboard', auth, requireScope('projects:write'), async (req: AuthenticatedRequest, res) => {
+    try {
+      const project = requireProjectAccess(store, req.identity!, String(req.params.projectId));
+      const whiteboard = await store.updateTaskWhiteboard(project.id, String(req.params.taskId), {
+        title: typeof req.body.title === 'string' ? req.body.title : undefined,
+        strokes: req.body.strokes === undefined ? undefined : parseWhiteboardStrokes(req.body.strokes),
+        updatedBy: req.identity!
+      });
+      const task = store.getProjectTask(project.id, String(req.params.taskId));
+      if (task) events.emit('task:whiteboard-updated', { task, whiteboard });
+      res.json(whiteboard);
+    } catch (error) {
+      res.status(projectAccessStatus(error as Error)).json({ error: (error as Error).message });
+    }
+  });
+
   app.get('/api/v1/profiles/status', auth, requireScope('messages:read'), (_req: AuthenticatedRequest, res) => {
     res.json(store.listProfileStatuses(config.agentProfiles));
   });
@@ -471,6 +499,26 @@ function parseSharedGroupIds(value: unknown, store: SQLiteMessageStore, identity
     }
   }
   return sharedGroupIds;
+}
+
+function parseWhiteboardStrokes(value: unknown): WhiteboardStroke[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) throw new Error('strokes must be an array');
+  return value.map((item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('Invalid whiteboard stroke');
+    const stroke = item as Record<string, unknown>;
+    if (stroke.points !== undefined && !Array.isArray(stroke.points)) throw new Error('Invalid whiteboard stroke points');
+    return {
+      id: typeof stroke.id === 'string' ? stroke.id : '',
+      color: typeof stroke.color === 'string' ? stroke.color : '#93c5fd',
+      size: typeof stroke.size === 'number' ? stroke.size : 3,
+      points: (Array.isArray(stroke.points) ? stroke.points : []).map((point) => {
+        if (!point || typeof point !== 'object' || Array.isArray(point)) throw new Error('Invalid whiteboard point');
+        const raw = point as Record<string, unknown>;
+        return { x: Number(raw.x), y: Number(raw.y) };
+      })
+    };
+  });
 }
 
 function buildGroupMessageMetadata(value: unknown, group: AgoraGroup): Record<string, unknown> {

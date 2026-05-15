@@ -53,6 +53,11 @@ describe('SQLiteMessageStore', () => {
     const task = await store.createProjectTask({ projectId: project.id, title: 'Persistir tarea', assigneeProfileIds: ['daneel-cto'], createdBy: author });
     await store.updateProjectTask(project.id, task.id, { status: 'done', updatedBy: author });
     await store.appendTaskDocument(project.id, task.id, { kind: 'result', body: 'Hecho', author });
+    await store.updateTaskWhiteboard(project.id, task.id, {
+      title: 'Arquitectura inicial',
+      strokes: [{ id: 'stroke_1', color: '#93c5fd', size: 3, points: [{ x: 12, y: 16 }, { x: 80, y: 120 }] }],
+      updatedBy: author
+    });
 
     const reopened = await SQLiteMessageStore.open(file);
     expect(reopened.listProjects().projects[0].name).toBe('Persistent Project');
@@ -60,6 +65,8 @@ describe('SQLiteMessageStore', () => {
     expect(reopened.listProjects().projects[0].sharedGroupIds).toEqual(['qa-squad']);
     expect(reopened.listProjectTasks(project.id).tasks[0].status).toBe('done');
     expect(reopened.listTaskDocuments(project.id, task.id).documents[0].body).toBe('Hecho');
+    expect(reopened.getTaskWhiteboard(project.id, task.id)?.title).toBe('Arquitectura inicial');
+    expect(reopened.getTaskWhiteboard(project.id, task.id)?.strokes[0].points[1]).toEqual({ x: 80, y: 120 });
   });
 
   it('updates project membership and task assignee pruning as one SQLite-backed mutation', async () => {

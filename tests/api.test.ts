@@ -375,6 +375,55 @@ describe('agent API', () => {
       .expect(200);
     expect(docs.body.documents[0].body).toContain('QA');
 
+    const emptyWhiteboard = await request(app)
+      .get(`/api/v1/projects/${project.body.id}/tasks/${task.body.id}/whiteboard`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'daneel-cto')
+      .expect(200);
+    expect(emptyWhiteboard.body.taskId).toBe(task.body.id);
+    expect(emptyWhiteboard.body.strokes).toEqual([]);
+
+    const whiteboard = await request(app)
+      .patch(`/api/v1/projects/${project.body.id}/tasks/${task.body.id}/whiteboard`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'columbo-qa')
+      .send({ title: 'Flujo de pantalla', strokes: [{ id: 'stroke_1', color: '#93c5fd', size: 3, points: [{ x: 10, y: 10 }, { x: 120, y: 80 }] }] })
+      .expect(200);
+    expect(whiteboard.body.title).toBe('Flujo de pantalla');
+    expect(whiteboard.body.strokes[0].points[1]).toEqual({ x: 120, y: 80 });
+
+    const renamedWhiteboard = await request(app)
+      .patch(`/api/v1/projects/${project.body.id}/tasks/${task.body.id}/whiteboard`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'columbo-qa')
+      .send({ title: 'Flujo refinado' })
+      .expect(200);
+    expect(renamedWhiteboard.body.title).toBe('Flujo refinado');
+    expect(renamedWhiteboard.body.strokes[0].points[1]).toEqual({ x: 120, y: 80 });
+
+    await request(app)
+      .patch(`/api/v1/projects/${project.body.id}/tasks/${task.body.id}/whiteboard`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'columbo-qa')
+      .send({ strokes: [{ id: 'bad', color: '#93c5fd', size: 3, points: [{ x: 'NaN', y: 10 }] }] })
+      .expect(400);
+
+    const manyStrokes = Array.from({ length: 90 }, (_, index) => ({ id: `stroke_${index}`, color: '#93c5fd', size: 3, points: Array.from({ length: 130 }, (__, pointIndex) => ({ x: pointIndex, y: index })) }));
+    const cappedWhiteboard = await request(app)
+      .patch(`/api/v1/projects/${project.body.id}/tasks/${task.body.id}/whiteboard`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'columbo-qa')
+      .send({ title: 'Capped', strokes: manyStrokes })
+      .expect(200);
+    expect(cappedWhiteboard.body.strokes).toHaveLength(80);
+    expect(cappedWhiteboard.body.strokes[0].points).toHaveLength(120);
+
+    await request(app)
+      .get(`/api/v1/projects/${project.body.id}/tasks/${task.body.id}/whiteboard`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'jeeves-ops')
+      .expect(403);
+
     await request(app)
       .patch(`/api/v1/projects/${project.body.id}/tasks/${task.body.id}`)
       .set('Authorization', 'Bearer test-secret')

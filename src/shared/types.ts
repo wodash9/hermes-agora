@@ -124,6 +124,26 @@ export interface TaskDocumentListResponse {
   generatedAt: string;
 }
 
+export interface WhiteboardPoint {
+  x: number;
+  y: number;
+}
+
+export interface WhiteboardStroke {
+  id: string;
+  color: string;
+  size: number;
+  points: WhiteboardPoint[];
+}
+
+export interface TaskWhiteboard {
+  taskId: string;
+  title: string;
+  strokes: WhiteboardStroke[];
+  updatedAt: string;
+  updatedBy: Author;
+}
+
 export interface Identity {
   type: 'human' | 'agent';
   profileId: string;

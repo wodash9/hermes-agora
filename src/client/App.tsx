@@ -1,8 +1,8 @@
-import { FormEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { type FormEvent, type PointerEvent as ReactPointerEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
-import type { AgoraGroup, AgoraMessage, AgoraProject, AgoraTask, Identity, KanbanStatus, ProfileStatus, TaskDocument } from '../shared/types';
+import type { AgoraGroup, AgoraMessage, AgoraProject, AgoraTask, Identity, KanbanStatus, ProfileStatus, TaskDocument, TaskWhiteboard, WhiteboardStroke } from '../shared/types';
 import { createClientAuthConfig, initKeycloak, isMockAllowed, logoutKeycloak } from './auth';
-import { appendTaskDocument, createGroup, createProject, createProjectTask, deleteGroup, deleteProject, fetchGroupMessages, fetchGroups, fetchIdentity, fetchMessages, fetchProfileStatuses, fetchProjectTasks, fetchProjects, fetchTaskDocuments, postGroupMessage, postMessage, updateGroup, updateProject, updateProjectTask, buildSocketAuth } from './api';
+import { appendTaskDocument, createGroup, createProject, createProjectTask, deleteGroup, deleteProject, fetchGroupMessages, fetchGroups, fetchIdentity, fetchMessages, fetchProfileStatuses, fetchProjectTasks, fetchProjects, fetchTaskDocuments, fetchTaskWhiteboard, postGroupMessage, postMessage, updateGroup, updateProject, updateProjectTask, updateTaskWhiteboard, buildSocketAuth } from './api';
 import { ACTION_OPTIONS, DIRECTED_TARGET_ALL, applyComposerAction, buildRecipientOptions, buildTargetMetadata, toggleMemberSelection, type ComposerAction } from './uiState';
 import { scrollMessagesToLatest } from './scroll';
 import './styles.css';
@@ -31,6 +31,7 @@ export function App() {
   const [projects, setProjects] = useState<AgoraProject[]>([]);
   const [projectTasks, setProjectTasks] = useState<Record<string, AgoraTask[]>>({});
   const [taskDocuments, setTaskDocuments] = useState<Record<string, TaskDocument[]>>({});
+  const [taskWhiteboards, setTaskWhiteboards] = useState<Record<string, TaskWhiteboard>>({});
   const [activeView, setActiveView] = useState<View>('chat');
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
@@ -59,6 +60,7 @@ export function App() {
     setProjects([]);
     setProjectTasks({});
     setTaskDocuments({});
+    setTaskWhiteboards({});
     setActiveView('chat');
     setActiveGroupId(null);
     setActiveProjectId(null);
@@ -155,6 +157,10 @@ export function App() {
       setProjectTasks((current) => ({ ...current, [task.projectId]: upsertById(current[task.projectId] ?? [], task) }));
       setTaskDocuments((current) => ({ ...current, [task.id]: appendUniqueDocument(current[task.id] ?? [], document) }));
     });
+    socket.on('task:whiteboard-updated', ({ task, whiteboard }: { task: AgoraTask; whiteboard: TaskWhiteboard }) => {
+      setProjectTasks((current) => ({ ...current, [task.projectId]: upsertById(current[task.projectId] ?? [], task) }));
+      setTaskWhiteboards((current) => ({ ...current, [task.id]: whiteboard }));
+    });
     return () => { active = false; window.clearInterval(interval); socket.close(); };
   }, [token]);
 
@@ -243,6 +249,23 @@ export function App() {
     if (!token || taskDocuments[taskId]) return;
     const response = await fetchTaskDocuments(token, projectId, taskId);
     setTaskDocuments((current) => ({ ...current, [taskId]: response.documents }));
+  }
+
+  async function handleLoadTaskWhiteboard(projectId: string, taskId: string) {
+    if (!token || taskWhiteboards[taskId]) return;
+    const whiteboard = await fetchTaskWhiteboard(token, projectId, taskId);
+    setTaskWhiteboards((current) => ({ ...current, [taskId]: whiteboard }));
+  }
+
+  async function handleSaveTaskWhiteboard(projectId: string, task: AgoraTask, title: string, strokes: WhiteboardStroke[]) {
+    if (!token) return;
+    try {
+      const whiteboard = await updateTaskWhiteboard(token, projectId, task.id, { title, strokes });
+      setTaskWhiteboards((current) => ({ ...current, [task.id]: whiteboard }));
+      await handleProjectRefresh(projectId);
+    } catch (err) {
+      setError((err as Error).message);
+    }
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -406,6 +429,7 @@ export function App() {
           activeProject={activeProject}
           tasks={activeProjectTasks}
           taskDocuments={taskDocuments}
+          taskWhiteboards={taskWhiteboards}
           onSelectProject={setActiveProjectId}
           onSaveProject={handleSaveProject}
           onDeleteProject={handleDeleteProject}
@@ -414,6 +438,8 @@ export function App() {
           onUpdateTask={handleUpdateTask}
           onAppendDocument={handleAppendTaskDocument}
           onLoadDocuments={handleLoadTaskDocuments}
+          onLoadWhiteboard={handleLoadTaskWhiteboard}
+          onSaveWhiteboard={handleSaveTaskWhiteboard}
         />
       ) : (
         <section className="chat">
@@ -454,7 +480,7 @@ export function App() {
   );
 }
 
-function ProjectsScreen({ projects, groups, profiles, identity, activeProject, tasks, taskDocuments, onSelectProject, onSaveProject, onDeleteProject, onCreateTask, onMoveTask, onUpdateTask, onAppendDocument, onLoadDocuments }: {
+function ProjectsScreen({ projects, groups, profiles, identity, activeProject, tasks, taskDocuments, taskWhiteboards, onSelectProject, onSaveProject, onDeleteProject, onCreateTask, onMoveTask, onUpdateTask, onAppendDocument, onLoadDocuments, onLoadWhiteboard, onSaveWhiteboard }: {
   projects: AgoraProject[];
   groups: AgoraGroup[];
   profiles: ProfileStatus[];
@@ -462,6 +488,7 @@ function ProjectsScreen({ projects, groups, profiles, identity, activeProject, t
   activeProject: AgoraProject | null;
   tasks: AgoraTask[];
   taskDocuments: Record<string, TaskDocument[]>;
+  taskWhiteboards: Record<string, TaskWhiteboard>;
   onSelectProject: (projectId: string | null) => void;
   onSaveProject: (name: string, description: string, memberProfileIds: string[], sharedGroupIds: string[], projectId?: string) => Promise<void>;
   onDeleteProject: (projectId: string) => Promise<void>;
@@ -470,6 +497,8 @@ function ProjectsScreen({ projects, groups, profiles, identity, activeProject, t
   onUpdateTask: (projectId: string, task: AgoraTask, input: Partial<Pick<AgoraTask, 'title' | 'description' | 'status' | 'assigneeProfileIds' | 'labels' | 'order'>>) => Promise<void>;
   onAppendDocument: (projectId: string, task: AgoraTask, body: string) => Promise<void>;
   onLoadDocuments: (projectId: string, taskId: string) => Promise<void>;
+  onLoadWhiteboard: (projectId: string, taskId: string) => Promise<void>;
+  onSaveWhiteboard: (projectId: string, task: AgoraTask, title: string, strokes: WhiteboardStroke[]) => Promise<void>;
 }) {
   const [projectPanel, setProjectPanel] = useState<ProjectPanel>('board');
   const [projectName, setProjectName] = useState('');
@@ -545,6 +574,16 @@ function ProjectsScreen({ projects, groups, profiles, identity, activeProject, t
     setBusy(true);
     try {
       await onUpdateTask(activeProject.id, task, { title, description });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveTaskWhiteboard(task: AgoraTask, title: string, strokes: WhiteboardStroke[]) {
+    if (!activeProject) return;
+    setBusy(true);
+    try {
+      await onSaveWhiteboard(activeProject.id, task, title, strokes);
     } finally {
       setBusy(false);
     }
@@ -717,7 +756,7 @@ function ProjectsScreen({ projects, groups, profiles, identity, activeProject, t
                     </select>
                   </div>
                   <small>Asignado: {task.assigneeProfileIds.length ? task.assigneeProfileIds.map((profileId) => memberNames.get(profileId) ?? profileId).join(', ') : 'sin asignar'}</small>
-                  <small>Click para abrir especificación Markdown · Documentación: {taskDocuments[task.id]?.length ?? 0}</small>
+                  <small>Click para abrir especificación Markdown · Whiteboard asignado · Documentación: {taskDocuments[task.id]?.length ?? 0}</small>
                 </article>)}
                 {columnTasks.length === 0 && <p className="empty-column">Sin tareas.</p>}
               </section>;
@@ -727,12 +766,15 @@ function ProjectsScreen({ projects, groups, profiles, identity, activeProject, t
             task={selectedTask}
             projectId={activeProject.id}
             documents={taskDocuments[selectedTask.id] ?? []}
+            whiteboard={taskWhiteboards[selectedTask.id] ?? null}
             documentDraft={documentDrafts[selectedTask.id] ?? ''}
             memberNames={memberNames}
             busy={busy}
             onClose={() => setSelectedTaskId(null)}
             onSaveSpecification={updateTaskSpecification}
             onLoadDocuments={onLoadDocuments}
+            onLoadWhiteboard={onLoadWhiteboard}
+            onSaveWhiteboard={saveTaskWhiteboard}
             onDocumentDraftChange={(value) => setDocumentDrafts((current) => ({ ...current, [selectedTask.id]: value }))}
             onDocument={() => void documentTask(selectedTask)}
           />}
@@ -742,16 +784,19 @@ function ProjectsScreen({ projects, groups, profiles, identity, activeProject, t
   </section>;
 }
 
-function TaskDetailModal({ task, projectId, documents, documentDraft, memberNames, busy, onClose, onSaveSpecification, onLoadDocuments, onDocumentDraftChange, onDocument }: {
+function TaskDetailModal({ task, projectId, documents, whiteboard, documentDraft, memberNames, busy, onClose, onSaveSpecification, onLoadDocuments, onLoadWhiteboard, onSaveWhiteboard, onDocumentDraftChange, onDocument }: {
   task: AgoraTask;
   projectId: string;
   documents: TaskDocument[];
+  whiteboard: TaskWhiteboard | null;
   documentDraft: string;
   memberNames: Map<string, string>;
   busy: boolean;
   onClose: () => void;
   onSaveSpecification: (task: AgoraTask, title: string, description: string) => Promise<void>;
   onLoadDocuments: (projectId: string, taskId: string) => Promise<void>;
+  onLoadWhiteboard: (projectId: string, taskId: string) => Promise<void>;
+  onSaveWhiteboard: (task: AgoraTask, title: string, strokes: WhiteboardStroke[]) => Promise<void>;
   onDocumentDraftChange: (value: string) => void;
   onDocument: () => void;
 }) {
@@ -765,6 +810,7 @@ function TaskDetailModal({ task, projectId, documents, documentDraft, memberName
 
   useEffect(() => {
     void onLoadDocuments(projectId, task.id);
+    void onLoadWhiteboard(projectId, task.id);
   }, [projectId, task.id]);
 
   useEffect(() => {
@@ -812,6 +858,8 @@ function TaskDetailModal({ task, projectId, documents, documentDraft, memberName
         </div>
       </form>
 
+      <TaskWhiteboardSketch task={task} whiteboard={whiteboard} busy={busy} onSave={onSaveWhiteboard} />
+
       <section className="task-modal-docs" aria-label="Documentación de tarea">
         <div className="section-heading compact">
           <span>Documentación</span>
@@ -826,6 +874,98 @@ function TaskDetailModal({ task, projectId, documents, documentDraft, memberName
       </section>
     </section>
   </div>;
+}
+
+function TaskWhiteboardSketch({ task, whiteboard, busy, onSave }: {
+  task: AgoraTask;
+  whiteboard: TaskWhiteboard | null;
+  busy: boolean;
+  onSave: (task: AgoraTask, title: string, strokes: WhiteboardStroke[]) => Promise<void>;
+}) {
+  const [titleDraft, setTitleDraft] = useState(whiteboard?.title ?? `${task.title} whiteboard`);
+  const [strokes, setStrokes] = useState<WhiteboardStroke[]>(whiteboard?.strokes ?? []);
+  const [activeStrokeId, setActiveStrokeId] = useState<string | null>(null);
+  const [color, setColor] = useState('#93c5fd');
+  const [size, setSize] = useState(3);
+
+  useEffect(() => {
+    setTitleDraft(whiteboard?.title ?? `${task.title} whiteboard`);
+    setStrokes(whiteboard?.strokes ?? []);
+    setActiveStrokeId(null);
+  }, [task.id, task.title, whiteboard?.title, whiteboard?.updatedAt]);
+
+  function pointFromEvent(event: ReactPointerEvent<SVGSVGElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return {
+      x: Math.max(0, Math.min(800, ((event.clientX - rect.left) / rect.width) * 800)),
+      y: Math.max(0, Math.min(420, ((event.clientY - rect.top) / rect.height) * 420))
+    };
+  }
+
+  function beginStroke(event: ReactPointerEvent<SVGSVGElement>) {
+    if (event.button !== 0) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const id = `stroke_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+    const point = pointFromEvent(event);
+    setActiveStrokeId(id);
+    setStrokes((current) => [...current, { id, color, size, points: [point] }].slice(-80));
+  }
+
+  function extendStroke(event: ReactPointerEvent<SVGSVGElement>) {
+    if (!activeStrokeId || event.buttons !== 1) return;
+    const point = pointFromEvent(event);
+    setStrokes((current) => current.map((stroke) => stroke.id === activeStrokeId ? { ...stroke, points: [...stroke.points, point].slice(0, 120) } : stroke));
+  }
+
+  function endStroke() {
+    setActiveStrokeId(null);
+  }
+
+  async function saveWhiteboard(event: FormEvent) {
+    event.preventDefault();
+    await onSave(task, titleDraft, strokes);
+  }
+
+  return <form className="whiteboard-panel" onSubmit={saveWhiteboard} aria-label="Whiteboard asignado a la card">
+    <div className="section-heading compact">
+      <span>Whiteboard asignado</span>
+      <h2>Esbozos rápidos de la card</h2>
+      <p>Dibuja flujo, arquitectura o layout. Se guarda vinculado a esta tarjeta.</p>
+    </div>
+    <label>Título del tablero
+      <input value={titleDraft} onChange={(event) => setTitleDraft(event.target.value)} placeholder="Ej. Flujo UI" />
+    </label>
+    <div className="whiteboard-toolbar">
+      <label>Color<input type="color" value={color} onChange={(event) => setColor(event.target.value)} aria-label="Color del trazo" /></label>
+      <label>Grosor<input type="range" min="1" max="12" value={size} onChange={(event) => setSize(Number(event.target.value))} aria-label="Grosor del trazo" /></label>
+      <button type="button" className="secondary-action" disabled={busy || strokes.length === 0} onClick={() => setStrokes((current) => current.slice(0, -1))}>Deshacer</button>
+      <button type="button" className="secondary-action" disabled={busy || strokes.length === 0} onClick={() => setStrokes([])}>Limpiar</button>
+    </div>
+    <svg
+      className="whiteboard-canvas"
+      role="img"
+      aria-label="Lienzo whiteboard de la tarjeta"
+      viewBox="0 0 800 420"
+      onPointerDown={beginStroke}
+      onPointerMove={extendStroke}
+      onPointerUp={endStroke}
+      onPointerLeave={endStroke}
+    >
+      <rect x="0" y="0" width="800" height="420" rx="18" />
+      <path className="whiteboard-grid-line" d="M0 105H800 M0 210H800 M0 315H800 M200 0V420 M400 0V420 M600 0V420" />
+      {strokes.map((stroke) => <path key={stroke.id} d={strokePath(stroke.points)} fill="none" stroke={stroke.color} strokeWidth={stroke.size} strokeLinecap="round" strokeLinejoin="round" />)}
+    </svg>
+    <div className="form-actions">
+      <button disabled={busy || !titleDraft.trim()}>{busy ? 'Guardando…' : 'Guardar whiteboard'}</button>
+      <small>{strokes.length} trazos · {whiteboard ? `última edición ${formatDate(whiteboard.updatedAt)}` : 'sin guardar todavía'}</small>
+    </div>
+  </form>;
+}
+
+function strokePath(points: Array<{ x: number; y: number }>): string {
+  if (points.length === 0) return '';
+  const [first, ...rest] = points;
+  return `M ${first.x.toFixed(1)} ${first.y.toFixed(1)} ${rest.map((point) => `L ${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' ')}`;
 }
 
 function GroupAdminPanel({ groups, profiles, activeGroupId, isOpen, onOpenChange, onSave, onDelete }: { groups: AgoraGroup[]; profiles: ProfileStatus[]; activeGroupId: string | null; isOpen: boolean; onOpenChange: (open: boolean) => void; onSave: (name: string, memberProfileIds: string[], groupId?: string) => Promise<void>; onDelete: (groupId: string) => Promise<void> }) {

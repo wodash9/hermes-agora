@@ -132,4 +132,55 @@ describe('Socket.IO auth', () => {
     limitedMember.close();
     outsider.close();
   });
+
+  it('emits task whiteboard updates only inside visible project rooms', async () => {
+    const owner = await connect({ token: 'test-secret', profileId: 'jeeves-ops' });
+    const sharedMember = await connect({ token: 'test-secret', profileId: 'columbo-qa' });
+    const limitedMember = await connect({ token: 'test-secret', profileId: 'limited-agent' });
+    const admin = await connect({ token: 'test-secret', profileId: 'seldon-ceo' });
+    const group = await request(app)
+      .post('/api/v1/groups')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'seldon-ceo')
+      .send({ name: 'Whiteboard Socket Group', memberProfileIds: ['jeeves-ops', 'columbo-qa'] })
+      .expect(201);
+    const project = await request(app)
+      .post('/api/v1/projects')
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'jeeves-ops')
+      .send({ name: 'Whiteboard Socket Project', memberProfileIds: ['limited-agent'], sharedGroupIds: [group.body.id] })
+      .expect(201);
+    const task = await request(app)
+      .post(`/api/v1/projects/${project.body.id}/tasks`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'jeeves-ops')
+      .send({ title: 'Dibujar flujo' })
+      .expect(201);
+
+    let ownerCount = 0;
+    let sharedCount = 0;
+    let limitedCount = 0;
+    let adminCount = 0;
+    owner.on('task:whiteboard-updated', () => { ownerCount += 1; });
+    sharedMember.on('task:whiteboard-updated', () => { sharedCount += 1; });
+    limitedMember.on('task:whiteboard-updated', () => { limitedCount += 1; });
+    admin.on('task:whiteboard-updated', () => { adminCount += 1; });
+
+    await request(app)
+      .patch(`/api/v1/projects/${project.body.id}/tasks/${task.body.id}/whiteboard`)
+      .set('Authorization', 'Bearer test-secret')
+      .set('X-Hermes-Profile', 'columbo-qa')
+      .send({ title: 'Flujo socket', strokes: [{ id: 'stroke_1', color: '#93c5fd', size: 3, points: [{ x: 10, y: 10 }, { x: 80, y: 60 }] }] })
+      .expect(200);
+
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(ownerCount).toBe(1);
+    expect(sharedCount).toBe(1);
+    expect(limitedCount).toBe(0);
+    expect(adminCount).toBe(1);
+    owner.close();
+    sharedMember.close();
+    limitedMember.close();
+    admin.close();
+  });
 });

@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import { access, mkdir, readFile, rename } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import type { AgentProfileConfig, AgoraGroup, AgoraMessage, AgoraProject, AgoraTask, Author, GroupListResponse, KanbanStatus, MessageListResponse, ProfilePresence, ProfileStatus, ProfileStatusResponse, ProjectListResponse, ProjectStatus, TaskDocument, TaskDocumentKind, TaskDocumentListResponse, TaskListResponse } from '../shared/types.js';
+import type { AgentProfileConfig, AgoraGroup, AgoraMessage, AgoraProject, AgoraTask, Author, GroupListResponse, KanbanStatus, MessageListResponse, ProfilePresence, ProfileStatus, ProfileStatusResponse, ProjectListResponse, ProjectStatus, TaskDocument, TaskDocumentKind, TaskDocumentListResponse, TaskListResponse, TaskWhiteboard, WhiteboardStroke } from '../shared/types.js';
 
 interface StoredProfileStatus {
   status: ProfilePresence;
@@ -19,6 +19,7 @@ interface StoreFile {
   projects: AgoraProject[];
   tasks: AgoraTask[];
   taskDocuments: TaskDocument[];
+  taskWhiteboards?: TaskWhiteboard[];
 }
 
 export interface CreateMessageInput {
@@ -103,6 +104,12 @@ export interface CreateTaskDocumentInput {
   author: Author;
 }
 
+export interface UpdateTaskWhiteboardInput {
+  title?: string;
+  strokes?: WhiteboardStroke[];
+  updatedBy: Author;
+}
+
 export interface SQLiteMessageStoreOptions {
   importJsonFile?: string;
 }
@@ -165,6 +172,14 @@ type TaskDocumentRow = {
   body: string;
   author_json: string;
   created_at: string;
+};
+
+type TaskWhiteboardRow = {
+  task_id: string;
+  title: string;
+  strokes_json: string;
+  updated_at: string;
+  updated_by_json: string;
 };
 
 type ProfileStatusRow = {
@@ -431,6 +446,36 @@ export class SQLiteMessageStore {
     return { documents, generatedAt: new Date().toISOString() };
   }
 
+  getTaskWhiteboard(projectIdRaw: string, taskId: string): TaskWhiteboard | null {
+    const task = this.getProjectTask(projectIdRaw, taskId);
+    if (!task) throw new Error('Task not found');
+    const row = this.db.prepare(`SELECT * FROM task_whiteboards WHERE task_id = ?`).get(task.id) as TaskWhiteboardRow | undefined;
+    return row ? rowToTaskWhiteboard(row) : null;
+  }
+
+  defaultTaskWhiteboard(projectIdRaw: string, taskId: string): TaskWhiteboard {
+    const task = this.getProjectTask(projectIdRaw, taskId);
+    if (!task) throw new Error('Task not found');
+    return { taskId: task.id, title: `${task.title} whiteboard`, strokes: [], updatedAt: task.updatedAt, updatedBy: task.updatedBy ?? task.createdBy };
+  }
+
+  async updateTaskWhiteboard(projectIdRaw: string, taskId: string, input: UpdateTaskWhiteboardInput): Promise<TaskWhiteboard> {
+    const task = this.getProjectTask(projectIdRaw, taskId);
+    if (!task) throw new Error('Task not found');
+    const current = this.getTaskWhiteboard(projectIdRaw, task.id);
+    const title = normalizeWhiteboardTitle(input.title ?? current?.title ?? `${task.title} whiteboard`);
+    const strokes = normalizeWhiteboardStrokes(input.strokes ?? current?.strokes ?? []);
+    const now = new Date().toISOString();
+    const whiteboard: TaskWhiteboard = { taskId: task.id, title, strokes, updatedAt: now, updatedBy: input.updatedBy };
+    const tx = this.db.transaction(() => {
+      this.insertTaskWhiteboard(whiteboard);
+      this.db.prepare(`UPDATE tasks SET updated_at = ?, updated_by_json = ? WHERE id = ?`).run(now, toJson(input.updatedBy), task.id);
+      this.db.prepare(`UPDATE projects SET updated_at = ? WHERE id = ?`).run(now, normalizeProjectId(projectIdRaw));
+    });
+    tx();
+    return whiteboard;
+  }
+
   async updateProfileStatus(input: UpdateProfileStatusInput): Promise<StoredProfileStatus> {
     const now = new Date().toISOString();
     const current = this.profileStatus(input.profileId);
@@ -550,6 +595,14 @@ export class SQLiteMessageStore {
         created_at TEXT NOT NULL
       );
       CREATE INDEX IF NOT EXISTS idx_task_documents_task_created ON task_documents(task_id, created_at);
+
+      CREATE TABLE IF NOT EXISTS task_whiteboards (
+        task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        strokes_json TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        updated_by_json TEXT NOT NULL
+      );
     `);
     this.ensureProjectSharingColumns();
     this.db.prepare(`INSERT INTO meta (key, value) VALUES ('schema_version', '1') ON CONFLICT(key) DO NOTHING`).run();
@@ -590,7 +643,8 @@ export class SQLiteMessageStore {
         sharedGroupIds: project.sharedGroupIds ?? []
       })),
       tasks: parsed.tasks ?? [],
-      taskDocuments: parsed.taskDocuments ?? []
+      taskDocuments: parsed.taskDocuments ?? [],
+      taskWhiteboards: parsed.taskWhiteboards ?? []
     };
     const tx = this.db.transaction(() => {
       for (const message of store.messages) this.insertMessage(message);
@@ -601,6 +655,7 @@ export class SQLiteMessageStore {
       for (const project of store.projects) this.insertProject(project);
       for (const task of store.tasks) this.insertTask(task);
       for (const document of store.taskDocuments) this.insertTaskDocument(document);
+      for (const whiteboard of store.taskWhiteboards ?? []) this.insertTaskWhiteboard(whiteboard);
       this.setMeta('legacy_json_imported', 'true');
       this.setMeta('legacy_json_imported_at', new Date().toISOString());
     });
@@ -664,6 +719,10 @@ export class SQLiteMessageStore {
 
   private insertTaskDocument(document: TaskDocument): void {
     this.db.prepare(`INSERT INTO task_documents (id, task_id, kind, body, author_json, created_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, body = excluded.body, author_json = excluded.author_json, created_at = excluded.created_at`).run(document.id, document.taskId, document.kind, document.body, toJson(document.author), document.createdAt);
+  }
+
+  private insertTaskWhiteboard(whiteboard: TaskWhiteboard): void {
+    this.db.prepare(`INSERT INTO task_whiteboards (task_id, title, strokes_json, updated_at, updated_by_json) VALUES (?, ?, ?, ?, ?) ON CONFLICT(task_id) DO UPDATE SET title = excluded.title, strokes_json = excluded.strokes_json, updated_at = excluded.updated_at, updated_by_json = excluded.updated_by_json`).run(whiteboard.taskId, whiteboard.title, toJson(normalizeWhiteboardStrokes(whiteboard.strokes)), whiteboard.updatedAt, toJson(whiteboard.updatedBy));
   }
 }
 
@@ -762,6 +821,16 @@ function rowToTaskDocument(row: TaskDocumentRow): TaskDocument {
   return { id: row.id, taskId: row.task_id, kind: parseTaskDocumentKind(row.kind), body: row.body, author: fromJson<Author>(row.author_json), createdAt: row.created_at };
 }
 
+function rowToTaskWhiteboard(row: TaskWhiteboardRow): TaskWhiteboard {
+  return {
+    taskId: row.task_id,
+    title: row.title,
+    strokes: normalizeWhiteboardStrokes(fromJson<WhiteboardStroke[]>(row.strokes_json)),
+    updatedAt: row.updated_at,
+    updatedBy: fromJson<Author>(row.updated_by_json)
+  };
+}
+
 function toJson(value: unknown): string {
   return JSON.stringify(value);
 }
@@ -795,6 +864,32 @@ function normalizeDescription(value: string): string {
   const description = value.trim();
   if (description.length > 4000) throw new Error('Description exceeds 4000 characters');
   return description;
+}
+
+function normalizeWhiteboardTitle(value: string): string {
+  const title = value.trim().replace(/\s+/g, ' ');
+  if (title.length < 2) throw new Error('Whiteboard title is required');
+  if (title.length > 120) throw new Error('Whiteboard title exceeds 120 characters');
+  return title;
+}
+
+function normalizeWhiteboardStrokes(strokes: WhiteboardStroke[]): WhiteboardStroke[] {
+  if (!Array.isArray(strokes)) throw new Error('strokes must be an array');
+  return strokes.slice(-80).map((stroke, index) => {
+    if (!stroke || typeof stroke !== 'object') throw new Error('Invalid whiteboard stroke');
+    const id = typeof stroke.id === 'string' && stroke.id.trim() ? stroke.id.trim().slice(0, 80) : `stroke_${index}`;
+    const color = typeof stroke.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(stroke.color) ? stroke.color : '#93c5fd';
+    const sizeRaw = Number(stroke.size);
+    const size = Number.isFinite(sizeRaw) ? Math.min(16, Math.max(1, Math.round(sizeRaw))) : 3;
+    if (!Array.isArray(stroke.points)) throw new Error('Invalid whiteboard stroke points');
+    const points = stroke.points.slice(0, 120).map((point) => {
+      const xRaw = Number(point?.x);
+      const yRaw = Number(point?.y);
+      if (!Number.isFinite(xRaw) || !Number.isFinite(yRaw)) throw new Error('Invalid whiteboard point');
+      return { x: Math.min(800, Math.max(0, Math.round(xRaw * 10) / 10)), y: Math.min(420, Math.max(0, Math.round(yRaw * 10) / 10)) };
+    });
+    return { id, color, size, points };
+  }).filter((stroke) => stroke.points.length > 0);
 }
 
 function normalizeLabels(labels: string[]): string[] {
