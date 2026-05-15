@@ -232,6 +232,13 @@ describe('mobile-responsive Agora layout CSS', () => {
     expect(appSource).toContain('renderWhiteboardDiagram');
     expect(appSource).toContain('renderWhiteboardShape');
     expect(appSource).toContain('viewBox="0 0 800 420"');
+    expect(appSource).toContain('https://embed.diagrams.net/');
+    expect(appSource).toContain('postMessage');
+    expect(appSource).toContain('event.source !== drawioFrameRef.current?.contentWindow');
+    expect(appSource).toContain('drawioXml');
+    expect(appSource).toContain('Abrir Draw.io completo');
+    expect(appSource).toContain('Guardar desde Draw.io');
+    expect(appSource).toContain('Diagrams.net');
     expect(css).toContain('pointer-events');
     expect(css).toContain('.whiteboard-panel');
     expect(css).toContain('.whiteboard-canvas');
@@ -239,6 +246,8 @@ describe('mobile-responsive Agora layout CSS', () => {
     expect(css).toContain('.whiteboard-diagram-node');
     expect(css).toContain('.whiteboard-connector');
     expect(css).toContain('.whiteboard-freehand');
+    expect(css).toContain('.drawio-editor-shell');
+    expect(css).toContain('.drawio-frame');
     expect(css).toContain('.whiteboard-shape-label');
   });
 

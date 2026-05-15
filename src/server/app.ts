@@ -341,6 +341,7 @@ export async function createAgoraApp({ config, store }: CreateAgoraAppOptions) {
         title: typeof req.body.title === 'string' ? req.body.title : undefined,
         strokes: req.body.strokes === undefined ? undefined : parseWhiteboardStrokes(req.body.strokes),
         diagram: req.body.diagram === undefined ? undefined : parseWhiteboardDiagram(req.body.diagram),
+        drawioXml: req.body.drawioXml === undefined ? undefined : parseDrawioXml(req.body.drawioXml),
         updatedBy: req.identity!
       });
       const task = store.getProjectTask(project.id, String(req.params.taskId));
@@ -558,6 +559,11 @@ function parseWhiteboardDiagram(value: unknown): WhiteboardDiagram {
       };
     })
   };
+}
+
+function parseDrawioXml(value: unknown): string {
+  if (typeof value !== 'string') throw new Error('drawioXml must be a string');
+  return value;
 }
 
 function buildGroupMessageMetadata(value: unknown, group: AgoraGroup): Record<string, unknown> {

@@ -2,7 +2,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema, type Tool } from '@modelcontextprotocol/sdk/types.js';
-import { buildWhiteboardDiagramPayload, type AgentDiagramElement } from './whiteboardPayload.js';
+import { appendWhiteboardDiagramPayload, buildWhiteboardDiagramPayload, type AgentDiagramElement, type ExistingWhiteboardPayload } from './whiteboardPayload.js';
 
 const TOOLS: Tool[] = [
   {
@@ -86,15 +86,10 @@ async function callAgoraTool(name: string, args: Record<string, unknown>): Promi
   }
   if (name === 'agora_set_task_whiteboard_shapes' || name === 'agora_append_task_whiteboard_shapes' || name === 'agora_set_task_whiteboard_diagram' || name === 'agora_append_task_whiteboard_diagram') {
     const { projectId, taskId } = taskArgs(args);
-    const payload = buildWhiteboardDiagramPayload({ title: typeof args.title === 'string' ? args.title : undefined, elements: parseElements(args.elements) });
+    let payload = buildWhiteboardDiagramPayload({ title: typeof args.title === 'string' ? args.title : undefined, elements: parseElements(args.elements) });
     if (name === 'agora_append_task_whiteboard_shapes' || name === 'agora_append_task_whiteboard_diagram') {
-      const current = await client.request<{ title?: string; strokes?: unknown[]; diagram?: { nodes?: unknown[]; connectors?: unknown[] } }>(`/api/v1/projects/${encodeURIComponent(projectId)}/tasks/${encodeURIComponent(taskId)}/whiteboard`);
-      payload.strokes = [...(Array.isArray(current.strokes) ? current.strokes : []), ...payload.strokes].slice(-80) as typeof payload.strokes;
-      payload.diagram = {
-        nodes: [...(Array.isArray(current.diagram?.nodes) ? current.diagram.nodes : []), ...payload.diagram.nodes].slice(-60) as typeof payload.diagram.nodes,
-        connectors: [...(Array.isArray(current.diagram?.connectors) ? current.diagram.connectors : []), ...payload.diagram.connectors].slice(-80) as typeof payload.diagram.connectors
-      };
-      payload.title ??= current.title;
+      const current = await client.request<ExistingWhiteboardPayload>(`/api/v1/projects/${encodeURIComponent(projectId)}/tasks/${encodeURIComponent(taskId)}/whiteboard`);
+      payload = appendWhiteboardDiagramPayload(current, payload);
     }
     return client.request(`/api/v1/projects/${encodeURIComponent(projectId)}/tasks/${encodeURIComponent(taskId)}/whiteboard`, {
       method: 'PATCH',

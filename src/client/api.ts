@@ -158,7 +158,7 @@ export async function fetchTaskWhiteboard(token: string, projectId: string, task
   return response.json();
 }
 
-export async function updateTaskWhiteboard(token: string, projectId: string, taskId: string, input: { title?: string; strokes?: WhiteboardStroke[]; diagram?: WhiteboardDiagram }): Promise<TaskWhiteboard> {
+export async function updateTaskWhiteboard(token: string, projectId: string, taskId: string, input: { title?: string; strokes?: WhiteboardStroke[]; diagram?: WhiteboardDiagram; drawioXml?: string }): Promise<TaskWhiteboard> {
   const response = await fetch(`/api/v1/projects/${encodeURIComponent(projectId)}/tasks/${encodeURIComponent(taskId)}/whiteboard`, {
     method: 'PATCH',
     headers: buildJsonHeaders(token),

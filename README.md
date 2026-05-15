@@ -93,7 +93,7 @@ curl -sS -X PATCH "$HERMES_AGORA_URL/api/v1/projects/<project-id>/tasks/<task-id
 
 ## MCP whiteboard para agentes
 
-El repo incluye un servidor MCP stdio para que perfiles Hermes creen esquemas visuales en whiteboards de cards sin construir manualmente todo el JSON. Además del canvas de trazos/formas, el payload guarda un modelo `diagram` tipo Draw.io con nodos y conectores editables desde la UI.
+El repo incluye un servidor MCP stdio para que perfiles Hermes creen esquemas visuales en whiteboards de cards sin construir manualmente todo el JSON. Además del canvas de trazos/formas, el payload guarda un modelo `diagram` y XML `drawioXml`. La UI de la card puede abrir el editor completo de Diagrams.net/Draw.io embebido (`embed.diagrams.net`) y guardar el XML en la tarea.
 
 Tools expuestas:
 
@@ -102,7 +102,7 @@ Tools expuestas:
 - `agora_get_task_whiteboard`: lee el whiteboard de una card.
 - `agora_set_task_whiteboard_shapes`: reemplaza el whiteboard con rectángulos, círculos, flechas y trazos.
 - `agora_append_task_whiteboard_shapes`: añade formas conservando lo existente.
-- `agora_set_task_whiteboard_diagram`: reemplaza el whiteboard por un diagrama tipo Draw.io con nodos (`rectangle`, `circle`, `diamond`, `terminator`, `note`) y conectores.
+- `agora_set_task_whiteboard_diagram`: reemplaza el whiteboard por un diagrama tipo Draw.io con nodos (`rectangle`, `circle`, `diamond`, `terminator`, `note`) y conectores. También genera `drawioXml` compatible con Diagrams.net.
 - `agora_append_task_whiteboard_diagram`: añade nodos/conectores al diagrama existente conservando lo anterior.
 
 Ejecución local:

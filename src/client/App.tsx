@@ -257,10 +257,10 @@ export function App() {
     setTaskWhiteboards((current) => ({ ...current, [taskId]: whiteboard }));
   }
 
-  async function handleSaveTaskWhiteboard(projectId: string, task: AgoraTask, title: string, strokes: WhiteboardStroke[], diagram: WhiteboardDiagram) {
+  async function handleSaveTaskWhiteboard(projectId: string, task: AgoraTask, title: string, strokes: WhiteboardStroke[], diagram: WhiteboardDiagram, drawioXml: string) {
     if (!token) return;
     try {
-      const whiteboard = await updateTaskWhiteboard(token, projectId, task.id, { title, strokes, diagram });
+      const whiteboard = await updateTaskWhiteboard(token, projectId, task.id, { title, strokes, diagram, drawioXml });
       setTaskWhiteboards((current) => ({ ...current, [task.id]: whiteboard }));
       await handleProjectRefresh(projectId);
     } catch (err) {
@@ -498,7 +498,7 @@ function ProjectsScreen({ projects, groups, profiles, identity, activeProject, t
   onAppendDocument: (projectId: string, task: AgoraTask, body: string) => Promise<void>;
   onLoadDocuments: (projectId: string, taskId: string) => Promise<void>;
   onLoadWhiteboard: (projectId: string, taskId: string) => Promise<void>;
-  onSaveWhiteboard: (projectId: string, task: AgoraTask, title: string, strokes: WhiteboardStroke[], diagram: WhiteboardDiagram) => Promise<void>;
+  onSaveWhiteboard: (projectId: string, task: AgoraTask, title: string, strokes: WhiteboardStroke[], diagram: WhiteboardDiagram, drawioXml: string) => Promise<void>;
 }) {
   const [projectPanel, setProjectPanel] = useState<ProjectPanel>('board');
   const [projectName, setProjectName] = useState('');
@@ -579,11 +579,11 @@ function ProjectsScreen({ projects, groups, profiles, identity, activeProject, t
     }
   }
 
-  async function saveTaskWhiteboard(task: AgoraTask, title: string, strokes: WhiteboardStroke[], diagram: WhiteboardDiagram) {
+  async function saveTaskWhiteboard(task: AgoraTask, title: string, strokes: WhiteboardStroke[], diagram: WhiteboardDiagram, drawioXml: string) {
     if (!activeProject) return;
     setBusy(true);
     try {
-      await onSaveWhiteboard(activeProject.id, task, title, strokes, diagram);
+      await onSaveWhiteboard(activeProject.id, task, title, strokes, diagram, drawioXml);
     } finally {
       setBusy(false);
     }
@@ -796,7 +796,7 @@ function TaskDetailModal({ task, projectId, documents, whiteboard, documentDraft
   onSaveSpecification: (task: AgoraTask, title: string, description: string) => Promise<void>;
   onLoadDocuments: (projectId: string, taskId: string) => Promise<void>;
   onLoadWhiteboard: (projectId: string, taskId: string) => Promise<void>;
-  onSaveWhiteboard: (task: AgoraTask, title: string, strokes: WhiteboardStroke[], diagram: WhiteboardDiagram) => Promise<void>;
+  onSaveWhiteboard: (task: AgoraTask, title: string, strokes: WhiteboardStroke[], diagram: WhiteboardDiagram, drawioXml: string) => Promise<void>;
   onDocumentDraftChange: (value: string) => void;
   onDocument: () => void;
 }) {
@@ -878,6 +878,9 @@ function TaskDetailModal({ task, projectId, documents, whiteboard, documentDraft
 
 type WhiteboardTool = NonNullable<WhiteboardStroke['kind']>;
 
+const DRAWIO_EDITOR_URL = 'https://embed.diagrams.net/?embed=1&proto=json&spin=1&ui=atlas&libraries=1&saveAndExit=1&noExitBtn=0';
+const DRAWIO_ORIGIN = 'https://embed.diagrams.net';
+
 const WHITEBOARD_TOOLS: Array<{ kind: WhiteboardTool; label: string }> = [
   { kind: 'freehand', label: 'Trazo' },
   { kind: 'rectangle', label: 'Rectángulo' },
@@ -889,11 +892,14 @@ function TaskWhiteboardSketch({ task, whiteboard, busy, onSave }: {
   task: AgoraTask;
   whiteboard: TaskWhiteboard | null;
   busy: boolean;
-  onSave: (task: AgoraTask, title: string, strokes: WhiteboardStroke[], diagram: WhiteboardDiagram) => Promise<void>;
+  onSave: (task: AgoraTask, title: string, strokes: WhiteboardStroke[], diagram: WhiteboardDiagram, drawioXml: string) => Promise<void>;
 }) {
   const [titleDraft, setTitleDraft] = useState(whiteboard?.title ?? `${task.title} whiteboard`);
   const [strokes, setStrokes] = useState<WhiteboardStroke[]>(whiteboard?.strokes ?? []);
   const [diagram, setDiagram] = useState<WhiteboardDiagram>(whiteboard?.diagram ?? emptyWhiteboardDiagram());
+  const [drawioXml, setDrawioXml] = useState(whiteboard?.drawioXml ?? '');
+  const [isDrawioOpen, setIsDrawioOpen] = useState(false);
+  const drawioFrameRef = useRef<HTMLIFrameElement | null>(null);
   const [selectedDiagramNodeIds, setSelectedDiagramNodeIds] = useState<string[]>([]);
   const [activeStrokeId, setActiveStrokeId] = useState<string | null>(null);
   const [tool, setTool] = useState<WhiteboardTool>('freehand');
@@ -904,9 +910,35 @@ function TaskWhiteboardSketch({ task, whiteboard, busy, onSave }: {
     setTitleDraft(whiteboard?.title ?? `${task.title} whiteboard`);
     setStrokes(whiteboard?.strokes ?? []);
     setDiagram(whiteboard?.diagram ?? emptyWhiteboardDiagram());
+    setDrawioXml(whiteboard?.drawioXml ?? '');
+    setIsDrawioOpen(false);
     setSelectedDiagramNodeIds([]);
     setActiveStrokeId(null);
   }, [task.id, task.title, whiteboard?.title, whiteboard?.updatedAt]);
+
+  useEffect(() => {
+    if (!isDrawioOpen) return;
+    function handleDrawioMessage(event: MessageEvent) {
+      if (event.origin !== DRAWIO_ORIGIN || event.source !== drawioFrameRef.current?.contentWindow) return;
+      let message: { event?: string; xml?: string };
+      try {
+        const parsed = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        if (!parsed || typeof parsed !== 'object') return;
+        message = parsed as { event?: string; xml?: string };
+      } catch {
+        return;
+      }
+      if (message.event === 'init') {
+        drawioFrameRef.current?.contentWindow?.postMessage(JSON.stringify({ action: 'load', autosave: 1, xml: drawioXml || defaultDrawioXml(titleDraft) }), DRAWIO_ORIGIN);
+      }
+      if ((message.event === 'save' || message.event === 'autosave' || message.event === 'exit') && typeof message.xml === 'string') {
+        setDrawioXml(message.xml);
+      }
+      if (message.event === 'exit') setIsDrawioOpen(false);
+    }
+    window.addEventListener('message', handleDrawioMessage);
+    return () => window.removeEventListener('message', handleDrawioMessage);
+  }, [drawioXml, isDrawioOpen, titleDraft]);
 
   function pointFromEvent(event: ReactPointerEvent<SVGSVGElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -998,7 +1030,7 @@ function TaskWhiteboardSketch({ task, whiteboard, busy, onSave }: {
 
   async function saveWhiteboard(event: FormEvent) {
     event.preventDefault();
-    await onSave(task, titleDraft, strokes, diagram);
+    await onSave(task, titleDraft, strokes, diagram, drawioXml);
   }
 
   const selectedNode = diagram.nodes.find((node) => node.id === selectedDiagramNodeIds.at(-1));
@@ -1012,6 +1044,20 @@ function TaskWhiteboardSketch({ task, whiteboard, busy, onSave }: {
     <label>Título del tablero
       <input value={titleDraft} onChange={(event) => setTitleDraft(event.target.value)} placeholder="Ej. Flujo UI" />
     </label>
+    <div className="drawio-actions">
+      <button type="button" className="secondary-action" onClick={() => setIsDrawioOpen((current) => !current)}>{isDrawioOpen ? 'Cerrar Draw.io' : 'Abrir Draw.io completo'}</button>
+      <button type="button" className="secondary-action" disabled={busy || !drawioXml.trim()} onClick={() => void onSave(task, titleDraft, strokes, diagram, drawioXml)}>Guardar desde Draw.io</button>
+      <small>Diagrams.net embebido guarda XML Draw.io en esta card. Los agentes pueden sustituirlo vía MCP.</small>
+    </div>
+    {isDrawioOpen && <div className="drawio-editor-shell" aria-label="Editor Draw.io completo">
+      <iframe
+        ref={drawioFrameRef}
+        className="drawio-frame"
+        title="Diagrams.net Draw.io editor"
+        src={DRAWIO_EDITOR_URL}
+        sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-downloads"
+      />
+    </div>}
     <div className="whiteboard-diagram-toolbar" aria-label="Herramientas de diagrama tipo Draw.io">
       <button type="button" className="secondary-action" onClick={() => addDiagramNode('rectangle')}>Añadir proceso</button>
       <button type="button" className="secondary-action" onClick={() => addDiagramNode('diamond')}>Añadir decisión</button>
@@ -1067,13 +1113,18 @@ function TaskWhiteboardSketch({ task, whiteboard, busy, onSave }: {
     </svg>
     <div className="form-actions">
       <button disabled={busy || !titleDraft.trim()}>{busy ? 'Guardando…' : 'Guardar whiteboard'}</button>
-      <small>{diagram.nodes.length} nodos · {diagram.connectors.length} conectores · {strokes.length} trazos · {whiteboard ? `última edición ${formatDate(whiteboard.updatedAt)}` : 'sin guardar todavía'}</small>
+      <small>{diagram.nodes.length} nodos · {diagram.connectors.length} conectores · {strokes.length} trazos · XML Draw.io {drawioXml.trim() ? 'guardado' : 'vacío'} · {whiteboard ? `última edición ${formatDate(whiteboard.updatedAt)}` : 'sin guardar todavía'}</small>
     </div>
   </form>;
 }
 
 function emptyWhiteboardDiagram(): WhiteboardDiagram {
   return { nodes: [], connectors: [] };
+}
+
+function defaultDrawioXml(title: string): string {
+  const safeTitle = title.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return `<mxfile host="Hermes Agora"><diagram name="${safeTitle}"><mxGraphModel dx="1200" dy="720" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0"><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel></diagram></mxfile>`;
 }
 
 function diagramKindLabel(kind: WhiteboardDiagramNode['kind']): string {

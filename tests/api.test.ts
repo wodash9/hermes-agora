@@ -383,6 +383,7 @@ describe('agent API', () => {
     expect(emptyWhiteboard.body.taskId).toBe(task.body.id);
     expect(emptyWhiteboard.body.strokes).toEqual([]);
     expect(emptyWhiteboard.body.diagram).toEqual({ nodes: [], connectors: [] });
+    expect(emptyWhiteboard.body.drawioXml).toBe('');
 
     const whiteboard = await request(app)
       .patch(`/api/v1/projects/${project.body.id}/tasks/${task.body.id}/whiteboard`)
@@ -401,7 +402,8 @@ describe('agent API', () => {
             { id: 'node_agent', kind: 'circle', label: 'Agente', x: 360, y: 70, width: 120, height: 120, color: '#a7f3d0', fill: '#123026' }
           ],
           connectors: [{ id: 'conn_evento', label: 'evento', fromNodeId: 'node_ui', toNodeId: 'node_agent', color: '#fbbf24' }]
-        }
+        },
+        drawioXml: '<mxfile><diagram name="Flujo"><mxGraphModel><root><mxCell id="0"/></root></mxGraphModel></diagram></mxfile>'
       })
       .expect(200);
     expect(whiteboard.body.title).toBe('Flujo de pantalla');
@@ -409,6 +411,7 @@ describe('agent API', () => {
     expect(whiteboard.body.strokes[0]).toMatchObject({ label: 'UI', fill: '#0f172a' });
     expect(whiteboard.body.diagram.nodes.map((node: { kind: string }) => node.kind)).toEqual(['rectangle', 'circle']);
     expect(whiteboard.body.diagram.connectors[0]).toMatchObject({ fromNodeId: 'node_ui', toNodeId: 'node_agent', label: 'evento' });
+    expect(whiteboard.body.drawioXml).toContain('<mxfile>');
 
     const renamedWhiteboard = await request(app)
       .patch(`/api/v1/projects/${project.body.id}/tasks/${task.body.id}/whiteboard`)
@@ -419,6 +422,7 @@ describe('agent API', () => {
     expect(renamedWhiteboard.body.title).toBe('Flujo refinado');
     expect(renamedWhiteboard.body.strokes[2]).toMatchObject({ kind: 'arrow', label: 'evento' });
     expect(renamedWhiteboard.body.diagram.connectors[0]).toMatchObject({ fromNodeId: 'node_ui', toNodeId: 'node_agent' });
+    expect(renamedWhiteboard.body.drawioXml).toContain('<mxfile>');
 
     await request(app)
       .patch(`/api/v1/projects/${project.body.id}/tasks/${task.body.id}/whiteboard`)

@@ -108,6 +108,7 @@ export interface UpdateTaskWhiteboardInput {
   title?: string;
   strokes?: WhiteboardStroke[];
   diagram?: WhiteboardDiagram;
+  drawioXml?: string;
   updatedBy: Author;
 }
 
@@ -180,6 +181,7 @@ type TaskWhiteboardRow = {
   title: string;
   strokes_json: string;
   diagram_json: string;
+  drawio_xml: string;
   updated_at: string;
   updated_by_json: string;
 };
@@ -458,7 +460,7 @@ export class SQLiteMessageStore {
   defaultTaskWhiteboard(projectIdRaw: string, taskId: string): TaskWhiteboard {
     const task = this.getProjectTask(projectIdRaw, taskId);
     if (!task) throw new Error('Task not found');
-    return { taskId: task.id, title: `${task.title} whiteboard`, strokes: [], diagram: defaultWhiteboardDiagram(), updatedAt: task.updatedAt, updatedBy: task.updatedBy ?? task.createdBy };
+    return { taskId: task.id, title: `${task.title} whiteboard`, strokes: [], diagram: defaultWhiteboardDiagram(), drawioXml: '', updatedAt: task.updatedAt, updatedBy: task.updatedBy ?? task.createdBy };
   }
 
   async updateTaskWhiteboard(projectIdRaw: string, taskId: string, input: UpdateTaskWhiteboardInput): Promise<TaskWhiteboard> {
@@ -468,8 +470,9 @@ export class SQLiteMessageStore {
     const title = normalizeWhiteboardTitle(input.title ?? current?.title ?? `${task.title} whiteboard`);
     const strokes = normalizeWhiteboardStrokes(input.strokes ?? current?.strokes ?? []);
     const diagram = normalizeWhiteboardDiagram(input.diagram ?? current?.diagram ?? defaultWhiteboardDiagram());
+    const drawioXml = normalizeDrawioXml(input.drawioXml ?? current?.drawioXml ?? '');
     const now = new Date().toISOString();
-    const whiteboard: TaskWhiteboard = { taskId: task.id, title, strokes, diagram, updatedAt: now, updatedBy: input.updatedBy };
+    const whiteboard: TaskWhiteboard = { taskId: task.id, title, strokes, diagram, drawioXml, updatedAt: now, updatedBy: input.updatedBy };
     const tx = this.db.transaction(() => {
       this.insertTaskWhiteboard(whiteboard);
       this.db.prepare(`UPDATE tasks SET updated_at = ?, updated_by_json = ? WHERE id = ?`).run(now, toJson(input.updatedBy), task.id);
@@ -604,6 +607,7 @@ export class SQLiteMessageStore {
         title TEXT NOT NULL,
         strokes_json TEXT NOT NULL,
         diagram_json TEXT NOT NULL DEFAULT '{"nodes":[],"connectors":[]}',
+        drawio_xml TEXT NOT NULL DEFAULT '',
         updated_at TEXT NOT NULL,
         updated_by_json TEXT NOT NULL
       );
@@ -616,6 +620,7 @@ export class SQLiteMessageStore {
   private ensureTaskWhiteboardColumns(): void {
     const columns = new Set((this.db.prepare(`PRAGMA table_info(task_whiteboards)`).all() as Array<{ name: string }>).map((column) => column.name));
     if (!columns.has('diagram_json')) this.db.prepare(`ALTER TABLE task_whiteboards ADD COLUMN diagram_json TEXT NOT NULL DEFAULT '{"nodes":[],"connectors":[]}'`).run();
+    if (!columns.has('drawio_xml')) this.db.prepare(`ALTER TABLE task_whiteboards ADD COLUMN drawio_xml TEXT NOT NULL DEFAULT ''`).run();
   }
 
   private ensureProjectSharingColumns(): void {
@@ -732,7 +737,7 @@ export class SQLiteMessageStore {
   }
 
   private insertTaskWhiteboard(whiteboard: TaskWhiteboard): void {
-    this.db.prepare(`INSERT INTO task_whiteboards (task_id, title, strokes_json, diagram_json, updated_at, updated_by_json) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(task_id) DO UPDATE SET title = excluded.title, strokes_json = excluded.strokes_json, diagram_json = excluded.diagram_json, updated_at = excluded.updated_at, updated_by_json = excluded.updated_by_json`).run(whiteboard.taskId, whiteboard.title, toJson(normalizeWhiteboardStrokes(whiteboard.strokes)), toJson(normalizeWhiteboardDiagram(whiteboard.diagram)), whiteboard.updatedAt, toJson(whiteboard.updatedBy));
+    this.db.prepare(`INSERT INTO task_whiteboards (task_id, title, strokes_json, diagram_json, drawio_xml, updated_at, updated_by_json) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(task_id) DO UPDATE SET title = excluded.title, strokes_json = excluded.strokes_json, diagram_json = excluded.diagram_json, drawio_xml = excluded.drawio_xml, updated_at = excluded.updated_at, updated_by_json = excluded.updated_by_json`).run(whiteboard.taskId, whiteboard.title, toJson(normalizeWhiteboardStrokes(whiteboard.strokes)), toJson(normalizeWhiteboardDiagram(whiteboard.diagram)), normalizeDrawioXml(whiteboard.drawioXml), whiteboard.updatedAt, toJson(whiteboard.updatedBy));
   }
 }
 
@@ -837,6 +842,7 @@ function rowToTaskWhiteboard(row: TaskWhiteboardRow): TaskWhiteboard {
     title: row.title,
     strokes: normalizeWhiteboardStrokes(fromJson<WhiteboardStroke[]>(row.strokes_json)),
     diagram: normalizeWhiteboardDiagram(fromJson<WhiteboardDiagram>(row.diagram_json ?? '{"nodes":[],"connectors":[]}')),
+    drawioXml: normalizeDrawioXml(row.drawio_xml ?? ''),
     updatedAt: row.updated_at,
     updatedBy: fromJson<Author>(row.updated_by_json)
   };
@@ -992,6 +998,16 @@ function normalizeWhiteboardColor(value: unknown, fallback: string): string {
   if (typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value)) return value.toLowerCase();
   if (fallback === 'transparent') return fallback;
   return fallback;
+}
+
+function normalizeDrawioXml(value: unknown): string {
+  if (value === undefined || value === null) return '';
+  if (typeof value !== 'string') throw new Error('drawioXml must be a string');
+  const xml = value.trim();
+  if (!xml) return '';
+  if (xml.length > 250_000) throw new Error('drawioXml exceeds 250000 characters');
+  if (!xml.includes('<mxfile') && !xml.includes('<mxGraphModel')) throw new Error('drawioXml must be a diagrams.net mxfile or mxGraphModel');
+  return xml.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '');
 }
 
 function normalizeLabels(labels: string[]): string[] {

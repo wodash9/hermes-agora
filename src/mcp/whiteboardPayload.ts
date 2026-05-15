@@ -1,5 +1,12 @@
 import type { WhiteboardDiagram, WhiteboardDiagramConnector, WhiteboardDiagramNode, WhiteboardStroke } from '../shared/types.js';
 
+export interface ExistingWhiteboardPayload {
+  title?: string;
+  strokes?: WhiteboardStroke[];
+  diagram?: WhiteboardDiagram;
+  drawioXml?: string;
+}
+
 export type AgentDiagramElement =
   | { kind: 'rectangle'; id?: string; label?: string; x: number; y: number; width: number; height: number; color?: string; fill?: string; size?: number }
   | { kind: 'circle'; id?: string; label?: string; x: number; y: number; radius: number; color?: string; fill?: string; size?: number }
@@ -18,6 +25,7 @@ export interface WhiteboardDiagramPayload {
   title?: string;
   strokes: WhiteboardStroke[];
   diagram: WhiteboardDiagram;
+  drawioXml: string;
 }
 
 const TOOL_NAMES = [
@@ -40,7 +48,30 @@ export function buildWhiteboardDiagramPayload(input: WhiteboardDiagramInput): Wh
   const elements = input.elements.slice(-80);
   const strokes = elements.map((element, index) => elementToStroke(element, index));
   const diagram = elementsToDiagram(elements);
-  return title ? { title, strokes, diagram } : { strokes, diagram };
+  const drawioXml = diagramToDrawioXml(diagram, title ?? 'Hermes Agora whiteboard');
+  return title ? { title, strokes, diagram, drawioXml } : { strokes, diagram, drawioXml };
+}
+
+export function appendWhiteboardDiagramPayload(current: ExistingWhiteboardPayload, next: WhiteboardDiagramPayload): WhiteboardDiagramPayload {
+  const title = next.title ?? current.title;
+  const appendedDiagramChanged = next.diagram.nodes.length > 0 || next.diagram.connectors.length > 0;
+  const diagram: WhiteboardDiagram = {
+    nodes: [...(Array.isArray(current.diagram?.nodes) ? current.diagram.nodes : []), ...next.diagram.nodes].slice(-60),
+    connectors: [...(Array.isArray(current.diagram?.connectors) ? current.diagram.connectors : []), ...next.diagram.connectors].slice(-80)
+  };
+  const drawioXml = appendedDiagramChanged
+    ? buildDrawioXmlFromDiagram(diagram, title ?? 'Hermes Agora whiteboard')
+    : current.drawioXml ?? next.drawioXml;
+  return {
+    ...(title ? { title } : {}),
+    strokes: [...(Array.isArray(current.strokes) ? current.strokes : []), ...next.strokes].slice(-80),
+    diagram,
+    drawioXml
+  };
+}
+
+export function buildDrawioXmlFromDiagram(diagram: WhiteboardDiagram, title: string): string {
+  return diagramToDrawioXml(diagram, title);
 }
 
 function elementsToDiagram(elements: AgentDiagramElement[]): WhiteboardDiagram {
@@ -159,6 +190,28 @@ function label(value: unknown): string | undefined {
 
 function safeId(value: unknown, fallback: string): string {
   return typeof value === 'string' && value.trim() ? value.trim().replace(/[^a-zA-Z0-9_.:-]/g, '_').slice(0, 80) : fallback;
+}
+
+function diagramToDrawioXml(diagram: WhiteboardDiagram, title: string): string {
+  const nodeCells = diagram.nodes.map((node, index) => {
+    const style = drawioStyle(node.kind, node.fill ?? defaultFill(node.kind), node.color);
+    return `<mxCell id="${xmlAttr(node.id)}" value="${xmlAttr(node.label)}" style="${xmlAttr(style)}" vertex="1" parent="1"><mxGeometry x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" as="geometry"/></mxCell>`;
+  }).join('');
+  const connectorCells = diagram.connectors.map((connector, index) => `<mxCell id="${xmlAttr(connector.id || `connector_${index}`)}" value="${xmlAttr(connector.label ?? '')}" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=${xmlAttr(connector.color)};" edge="1" parent="1" source="${xmlAttr(connector.fromNodeId)}" target="${xmlAttr(connector.toNodeId)}"><mxGeometry relative="1" as="geometry"/></mxCell>`).join('');
+  return `<mxfile host="Hermes Agora" agent="hermes-agora-whiteboard-mcp"><diagram name="${xmlAttr(title)}"><mxGraphModel dx="1200" dy="720" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0"><root><mxCell id="0"/><mxCell id="1" parent="0"/>${nodeCells}${connectorCells}</root></mxGraphModel></diagram></mxfile>`;
+}
+
+function drawioStyle(kind: WhiteboardDiagramNode['kind'], fill: string, stroke: string): string {
+  const base = `whiteSpace=wrap;html=1;rounded=1;strokeWidth=2;fillColor=${fill};strokeColor=${stroke};fontColor=#e2e8f0;`;
+  if (kind === 'circle') return `ellipse;${base}`;
+  if (kind === 'diamond') return `rhombus;${base}`;
+  if (kind === 'terminator') return `rounded=1;arcSize=50;whiteSpace=wrap;html=1;strokeWidth=2;fillColor=${fill};strokeColor=${stroke};fontColor=#e2e8f0;`;
+  if (kind === 'note') return `shape=note;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;strokeWidth=2;fillColor=${fill};strokeColor=${stroke};fontColor=#e2e8f0;`;
+  return base;
+}
+
+function xmlAttr(value: unknown): string {
+  return String(value ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function defaultNodeLabel(kind: WhiteboardDiagramNode['kind']): string {

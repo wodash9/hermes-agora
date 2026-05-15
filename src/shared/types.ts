@@ -173,6 +173,7 @@ export interface TaskWhiteboard {
   title: string;
   strokes: WhiteboardStroke[];
   diagram: WhiteboardDiagram;
+  drawioXml: string;
   updatedAt: string;
   updatedBy: Author;
 }

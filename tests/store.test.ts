@@ -67,6 +67,7 @@ describe('SQLiteMessageStore', () => {
         ],
         connectors: [{ id: 'conn_1', label: 'orquesta', fromNodeId: 'node_api', toNodeId: 'node_agent', color: '#fbbf24' }]
       },
+      drawioXml: '<mxfile><diagram name="Arquitectura"><mxGraphModel><root><mxCell id="0"/></root></mxGraphModel></diagram></mxfile>',
       updatedBy: author
     });
 
@@ -81,6 +82,7 @@ describe('SQLiteMessageStore', () => {
     expect(reopened.getTaskWhiteboard(project.id, task.id)?.strokes[0]).toMatchObject({ label: 'API', fill: '#1e293b' });
     expect(reopened.getTaskWhiteboard(project.id, task.id)?.diagram.nodes.map((node) => node.kind)).toEqual(['rectangle', 'circle']);
     expect(reopened.getTaskWhiteboard(project.id, task.id)?.diagram.connectors[0]).toMatchObject({ fromNodeId: 'node_api', toNodeId: 'node_agent', label: 'orquesta' });
+    expect(reopened.getTaskWhiteboard(project.id, task.id)?.drawioXml).toContain('<mxfile>');
   });
 
   it('updates project membership and task assignee pruning as one SQLite-backed mutation', async () => {
