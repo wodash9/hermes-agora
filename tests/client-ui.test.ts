@@ -187,6 +187,19 @@ describe('mobile-responsive Agora layout CSS', () => {
     expect(css).toContain('.projects-screen { display: grid; grid-template-rows: auto auto auto minmax(0, 1fr);');
   });
 
+  it('opens Trello-style task cards in a Markdown editor modal instead of exposing descriptions on the board', () => {
+    const appSource = readFileSync(join(process.cwd(), 'src/client/App.tsx'), 'utf8');
+    expect(appSource).toContain('TaskDetailModal');
+    expect(appSource).toContain('selectedTaskId');
+    expect(appSource).toContain('role="dialog"');
+    expect(appSource).toContain('markdown-editor');
+    expect(appSource).toContain('Guardar especificación');
+    expect(appSource).toContain('onUpdateTask');
+    expect(appSource).not.toContain('{task.description && <p>{task.description}</p>}');
+    expect(css).toContain('.task-modal-backdrop');
+    expect(css).toContain('.task-card { width: 100%; text-align: left;');
+  });
+
   it('shows an explicit logout action in the signed-in identity panel', () => {
     const appSource = readFileSync(join(process.cwd(), 'src/client/App.tsx'), 'utf8');
     expect(appSource).toContain('handleLogout');

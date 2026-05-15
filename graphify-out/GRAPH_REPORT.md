@@ -1,16 +1,16 @@
-# Graph Report - hermes-agora  (2026-05-14)
+# Graph Report - hermes-agora  (2026-05-15)
 
 ## Corpus Check
-- 41 files · ~29,852 words
+- 41 files · ~30,321 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 445 nodes · 997 edges · 21 communities (19 shown, 2 thin omitted)
+- 446 nodes · 998 edges · 20 communities (18 shown, 2 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b8671e64`
+- Built from commit: `0c33bfca`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -30,8 +30,7 @@
 - [[_COMMUNITY_Community 12|Community 12]]
 - [[_COMMUNITY_Community 13|Community 13]]
 - [[_COMMUNITY_Community 14|Community 14]]
-- [[_COMMUNITY_Community 15|Community 15]]
-- [[_COMMUNITY_Community 17|Community 17]]
+- [[_COMMUNITY_Community 16|Community 16]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `SQLiteMessageStore` - 47 edges
@@ -46,40 +45,40 @@
 10. `loadServerConfig()` - 10 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `normalizeSharedGroupIds()` --calls--> `normalizeGroupId()`  [EXTRACTED]
-  src/server/store.ts → src/server/store.ts  _Bridges community 1 → community 0_
+- `rowToTaskDocument()` --calls--> `parseTaskDocumentKind()`  [EXTRACTED]
+  src/server/store.ts → src/server/store.ts  _Bridges community 4 → community 0_
 - `buildJsonHeaders()` --calls--> `buildAuthHeaders()`  [EXTRACTED]
-  src/client/api.ts → src/client/api.ts  _Bridges community 13 → community 8_
+  src/client/api.ts → src/client/api.ts  _Bridges community 5 → community 8_
 
-## Communities (21 total, 2 thin omitted)
+## Communities (20 total, 2 thin omitted)
 
 ### Community 0 - "Community 0"
-Cohesion: 0.07
-Nodes (46): assignableProjectProfileIds(), CreateGroupInput, CreateMessageInput, CreateProjectInput, CreateTaskDocumentInput, CreateTaskInput, fromJson(), GroupRow (+38 more)
+Cohesion: 0.05
+Nodes (36): assignableProjectProfileIds(), fromJson(), JsonMessageStore, nextTaskOrder(), normalizeAssignees(), normalizeChannel(), normalizeDescription(), normalizeGroupId() (+28 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.06
-Nodes (14): JsonMessageStore, normalizeChannel(), normalizeGroupId(), normalizeGroupName(), slugifyGroupName(), SQLiteMessageStore, uniqueGroupId(), author (+6 more)
-
-### Community 2 - "Community 2"
 Cohesion: 0.1
 Nodes (30): loadServerConfig(), parseProfiles(), AgoraEvents, createAgoraApp(), defaultProfiles, deriveLegacyJsonDataFile(), deriveSqliteDataFile(), loadServerConfig() (+22 more)
+
+### Community 2 - "Community 2"
+Cohesion: 0.07
+Nodes (39): CreateGroupInput, CreateMessageInput, CreateProjectInput, CreateTaskDocumentInput, CreateTaskInput, GroupRow, ListMessagesInput, MessageRow (+31 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.11
 Nodes (24): AgoraListenerClient, AgoraTaskListener, AgoraTaskListenerOptions, blockedText(), BootstrapMode, buildHermesPrompt(), extractTaskId(), isActionableTaskForProfile() (+16 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.12
-Nodes (29): buildAuthHeaders(), buildJsonHeaders(), buildSocketAuth(), createGroup(), deleteGroup(), fetchGroupMessages(), fetchGroups(), fetchIdentity() (+21 more)
+Cohesion: 0.17
+Nodes (25): buildGroupMessageMetadata(), canManageGroups(), createAgoraApp(), groupAccessStatus(), isGroupMember(), parseMemberProfileIds(), requireGroupAccess(), buildGroupMessageMetadata() (+17 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.08
-Nodes (6): App(), composerPlaceholder(), KANBAN_COLUMNS, ProjectPanel, View, ProfileStatus
+Cohesion: 0.14
+Nodes (26): buildAuthHeaders(), buildJsonHeaders(), buildSocketAuth(), createGroup(), deleteGroup(), fetchGroupMessages(), fetchGroups(), fetchIdentity() (+18 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.17
-Nodes (24): buildGroupMessageMetadata(), canManageGroups(), createAgoraApp(), groupAccessStatus(), isGroupMember(), parseMemberProfileIds(), requireGroupAccess(), buildGroupMessageMetadata() (+16 more)
+Cohesion: 0.08
+Nodes (5): App(), composerPlaceholder(), KANBAN_COLUMNS, ProjectPanel, View
 
 ### Community 7 - "Community 7"
 Cohesion: 0.19
@@ -105,11 +104,7 @@ Nodes (18): Agora listener, API de agentes, code:bash (npm install), code:bash (
 Cohesion: 0.18
 Nodes (8): AuthMode, ClientAuthConfig, createClientAuthConfig(), defaultPostLogoutRedirectUri(), initKeycloak(), isMockAllowed(), logoutKeycloak(), resetKeycloakForRetry()
 
-### Community 13 - "Community 13"
-Cohesion: 0.17
-Nodes (12): buildAuthHeaders(), buildSocketAuth(), deleteGroup(), fetchGroupMessages(), fetchGroups(), fetchIdentity(), fetchMessages(), fetchProfileStatuses() (+4 more)
-
-### Community 17 - "Community 17"
+### Community 16 - "Community 16"
 Cohesion: 0.5
 Nodes (3): Acceptance criteria, Hermes Agora V0 Implementation Plan, MVP boundary
 
@@ -121,17 +116,17 @@ Nodes (3): Acceptance criteria, Hermes Agora V0 Implementation Plan, MVP boundar
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `SQLiteMessageStore` connect `Community 1` to `Community 0`, `Community 2`, `Community 6`?**
+- **Why does `SQLiteMessageStore` connect `Community 0` to `Community 1`, `Community 2`, `Community 4`?**
   _High betweenness centrality (0.114) - this node is a cross-community bridge._
-- **Why does `AgoraMessage` connect `Community 4` to `Community 0`, `Community 3`, `Community 5`, `Community 6`?**
+- **Why does `AgoraMessage` connect `Community 2` to `Community 3`, `Community 4`, `Community 5`, `Community 6`?**
   _High betweenness centrality (0.079) - this node is a cross-community bridge._
-- **Why does `AgoraGroup` connect `Community 4` to `Community 0`, `Community 3`, `Community 5`, `Community 6`?**
+- **Why does `AgoraGroup` connect `Community 2` to `Community 3`, `Community 4`, `Community 5`, `Community 6`?**
   _High betweenness centrality (0.079) - this node is a cross-community bridge._
 - **What connects `file`, `statuses`, `author` to the rest of the system?**
   _65 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.07 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.06 - nodes in this community are weakly interconnected._
-- **Should `Community 2` be split into smaller, more focused modules?**
   _Cohesion score 0.1 - nodes in this community are weakly interconnected._
+- **Should `Community 2` be split into smaller, more focused modules?**
+  _Cohesion score 0.07 - nodes in this community are weakly interconnected._

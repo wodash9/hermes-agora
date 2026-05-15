@@ -215,9 +215,13 @@ export function App() {
   }
 
   async function handleMoveTask(projectId: string, task: AgoraTask, status: KanbanStatus) {
+    await handleUpdateTask(projectId, task, { status });
+  }
+
+  async function handleUpdateTask(projectId: string, task: AgoraTask, input: Partial<Pick<AgoraTask, 'title' | 'description' | 'status' | 'assigneeProfileIds' | 'labels' | 'order'>>) {
     if (!token) return;
     try {
-      const updated = await updateProjectTask(token, projectId, task.id, { status });
+      const updated = await updateProjectTask(token, projectId, task.id, input);
       setProjectTasks((current) => ({ ...current, [projectId]: upsertById(current[projectId] ?? [], updated) }));
     } catch (err) {
       setError((err as Error).message);
@@ -407,6 +411,7 @@ export function App() {
           onDeleteProject={handleDeleteProject}
           onCreateTask={handleCreateTask}
           onMoveTask={handleMoveTask}
+          onUpdateTask={handleUpdateTask}
           onAppendDocument={handleAppendTaskDocument}
           onLoadDocuments={handleLoadTaskDocuments}
         />
@@ -449,7 +454,7 @@ export function App() {
   );
 }
 
-function ProjectsScreen({ projects, groups, profiles, identity, activeProject, tasks, taskDocuments, onSelectProject, onSaveProject, onDeleteProject, onCreateTask, onMoveTask, onAppendDocument, onLoadDocuments }: {
+function ProjectsScreen({ projects, groups, profiles, identity, activeProject, tasks, taskDocuments, onSelectProject, onSaveProject, onDeleteProject, onCreateTask, onMoveTask, onUpdateTask, onAppendDocument, onLoadDocuments }: {
   projects: AgoraProject[];
   groups: AgoraGroup[];
   profiles: ProfileStatus[];
@@ -462,6 +467,7 @@ function ProjectsScreen({ projects, groups, profiles, identity, activeProject, t
   onDeleteProject: (projectId: string) => Promise<void>;
   onCreateTask: (projectId: string, title: string, description: string, assigneeProfileIds: string[]) => Promise<void>;
   onMoveTask: (projectId: string, task: AgoraTask, status: KanbanStatus) => Promise<void>;
+  onUpdateTask: (projectId: string, task: AgoraTask, input: Partial<Pick<AgoraTask, 'title' | 'description' | 'status' | 'assigneeProfileIds' | 'labels' | 'order'>>) => Promise<void>;
   onAppendDocument: (projectId: string, task: AgoraTask, body: string) => Promise<void>;
   onLoadDocuments: (projectId: string, taskId: string) => Promise<void>;
 }) {
@@ -474,6 +480,7 @@ function ProjectsScreen({ projects, groups, profiles, identity, activeProject, t
   const [taskDescription, setTaskDescription] = useState('');
   const [taskAssignees, setTaskAssignees] = useState<string[]>([]);
   const [documentDrafts, setDocumentDrafts] = useState<Record<string, string>>({});
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -482,8 +489,13 @@ function ProjectsScreen({ projects, groups, profiles, identity, activeProject, t
     setProjectMembers(activeProject?.memberProfileIds ?? []);
     setProjectSharedGroupIds(activeProject?.sharedGroupIds ?? []);
     setTaskAssignees([]);
+    setSelectedTaskId(null);
     if (!activeProject) setProjectPanel('settings');
   }, [activeProject]);
+
+  useEffect(() => {
+    if (selectedTaskId && !tasks.some((task) => task.id === selectedTaskId)) setSelectedTaskId(null);
+  }, [selectedTaskId, tasks]);
 
   async function saveProject(event: FormEvent) {
     event.preventDefault();
@@ -528,6 +540,16 @@ function ProjectsScreen({ projects, groups, profiles, identity, activeProject, t
     }
   }
 
+  async function updateTaskSpecification(task: AgoraTask, title: string, description: string) {
+    if (!activeProject) return;
+    setBusy(true);
+    try {
+      await onUpdateTask(activeProject.id, task, { title, description });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const memberNames = new Map(profiles.map((profile) => [profile.profileId, profile.displayName]));
   if (identity) memberNames.set(identity.profileId, identity.displayName);
   const groupNames = new Map(groups.map((group) => [group.id, group.name]));
@@ -549,6 +571,7 @@ function ProjectsScreen({ projects, groups, profiles, identity, activeProject, t
       : 'Privado'
     : 'Privado por defecto';
   const assignableProfileIds = activeProject ? [activeProject.ownerProfileId, ...activeProject.memberProfileIds].filter((profileId, index, all) => all.indexOf(profileId) === index) : [];
+  const selectedTask = selectedTaskId ? tasks.find((task) => task.id === selectedTaskId) ?? null : null;
 
   function startNewProject() {
     onSelectProject(null);
@@ -667,29 +690,142 @@ function ProjectsScreen({ projects, groups, profiles, identity, activeProject, t
               const columnTasks = tasks.filter((task) => task.status === column.status);
               return <section key={column.status} className={`kanban-column status-${column.status}`}>
                 <h3>{column.label}<span>{columnTasks.length}</span></h3>
-                {columnTasks.map((task) => <article key={task.id} className="task-card">
-                  <div className="task-card-head"><strong>{task.title}</strong><select value={task.status} onChange={(event) => void onMoveTask(activeProject.id, task, event.target.value as KanbanStatus)}>
-                    {KANBAN_COLUMNS.map((option) => <option key={option.status} value={option.status}>{option.label}</option>)}
-                  </select></div>
-                  {task.description && <p>{task.description}</p>}
+                {columnTasks.map((task) => <article
+                  key={task.id}
+                  className="task-card"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Abrir especificación de ${task.title}`}
+                  onClick={() => setSelectedTaskId(task.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setSelectedTaskId(task.id);
+                    }
+                  }}
+                >
+                  <div className="task-card-head">
+                    <strong>{task.title}</strong>
+                    <select
+                      value={task.status}
+                      aria-label={`Mover ${task.title}`}
+                      onClick={(event) => event.stopPropagation()}
+                      onKeyDown={(event) => event.stopPropagation()}
+                      onChange={(event) => void onMoveTask(activeProject.id, task, event.target.value as KanbanStatus)}
+                    >
+                      {KANBAN_COLUMNS.map((option) => <option key={option.status} value={option.status}>{option.label}</option>)}
+                    </select>
+                  </div>
                   <small>Asignado: {task.assigneeProfileIds.length ? task.assigneeProfileIds.map((profileId) => memberNames.get(profileId) ?? profileId).join(', ') : 'sin asignar'}</small>
-                  <details onToggle={(event) => { if ((event.currentTarget as HTMLDetailsElement).open) void onLoadDocuments(activeProject.id, task.id); }}>
-                    <summary>Documentación ({taskDocuments[task.id]?.length ?? 0})</summary>
-                    <ol className="task-documents">
-                      {(taskDocuments[task.id] ?? []).map((document) => <li key={document.id}><strong>{document.kind}</strong><p>{document.body}</p><small>{document.author.displayName} · {formatDate(document.createdAt)}</small></li>)}
-                    </ol>
-                    <textarea value={documentDrafts[task.id] ?? ''} onChange={(event) => setDocumentDrafts((current) => ({ ...current, [task.id]: event.target.value }))} placeholder="Añadir nota, resultado, bloqueo o QA…" rows={3} />
-                    <button type="button" disabled={busy || !documentDrafts[task.id]?.trim()} onClick={() => void documentTask(task)}>Documentar</button>
-                  </details>
+                  <small>Click para abrir especificación Markdown · Documentación: {taskDocuments[task.id]?.length ?? 0}</small>
                 </article>)}
                 {columnTasks.length === 0 && <p className="empty-column">Sin tareas.</p>}
               </section>;
             })}
           </div>
+          {activeProject && selectedTask && <TaskDetailModal
+            task={selectedTask}
+            projectId={activeProject.id}
+            documents={taskDocuments[selectedTask.id] ?? []}
+            documentDraft={documentDrafts[selectedTask.id] ?? ''}
+            memberNames={memberNames}
+            busy={busy}
+            onClose={() => setSelectedTaskId(null)}
+            onSaveSpecification={updateTaskSpecification}
+            onLoadDocuments={onLoadDocuments}
+            onDocumentDraftChange={(value) => setDocumentDrafts((current) => ({ ...current, [selectedTask.id]: value }))}
+            onDocument={() => void documentTask(selectedTask)}
+          />}
         </> : <div className="empty project-empty"><strong>No hay proyecto activo.</strong><p>Crea uno desde Ajustes; será privado por defecto hasta que añadas acceso.</p><button type="button" onClick={() => setProjectPanel('settings')}>Crear proyecto</button></div>}
       </section>}
     </div>
   </section>;
+}
+
+function TaskDetailModal({ task, projectId, documents, documentDraft, memberNames, busy, onClose, onSaveSpecification, onLoadDocuments, onDocumentDraftChange, onDocument }: {
+  task: AgoraTask;
+  projectId: string;
+  documents: TaskDocument[];
+  documentDraft: string;
+  memberNames: Map<string, string>;
+  busy: boolean;
+  onClose: () => void;
+  onSaveSpecification: (task: AgoraTask, title: string, description: string) => Promise<void>;
+  onLoadDocuments: (projectId: string, taskId: string) => Promise<void>;
+  onDocumentDraftChange: (value: string) => void;
+  onDocument: () => void;
+}) {
+  const [titleDraft, setTitleDraft] = useState(task.title);
+  const [markdownDraft, setMarkdownDraft] = useState(task.description);
+
+  useEffect(() => {
+    setTitleDraft(task.title);
+    setMarkdownDraft(task.description);
+  }, [task.id, task.title, task.description]);
+
+  useEffect(() => {
+    void onLoadDocuments(projectId, task.id);
+  }, [projectId, task.id]);
+
+  useEffect(() => {
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [onClose]);
+
+  async function saveSpecification(event: FormEvent) {
+    event.preventDefault();
+    await onSaveSpecification(task, titleDraft, markdownDraft);
+  }
+
+  const assignees = task.assigneeProfileIds.length
+    ? task.assigneeProfileIds.map((profileId) => memberNames.get(profileId) ?? profileId).join(', ')
+    : 'sin asignar';
+
+  return <div className="task-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <section className="task-modal" role="dialog" aria-modal="true" aria-labelledby="task-modal-title">
+      <header className="task-modal-header">
+        <div>
+          <span className="task-modal-kicker">Especificación Markdown</span>
+          <h2 id="task-modal-title">{task.title}</h2>
+          <p>{assignees} · {KANBAN_COLUMNS.find((column) => column.status === task.status)?.label ?? task.status}</p>
+        </div>
+        <button className="icon-button" type="button" aria-label="Cerrar especificación" onClick={onClose}>×</button>
+      </header>
+
+      <form className="task-spec-form" onSubmit={saveSpecification}>
+        <label>Título
+          <input value={titleDraft} onChange={(event) => setTitleDraft(event.target.value)} placeholder="Título de tarea" />
+        </label>
+        <label>Especificación
+          <textarea className="markdown-editor" value={markdownDraft} onChange={(event) => setMarkdownDraft(event.target.value)} placeholder="# Objetivo\n\n## Contexto\n\n## Criterio de cierre" rows={12} />
+        </label>
+        <div className="markdown-preview" aria-label="Vista previa Markdown">
+          <span>Vista previa</span>
+          <pre>{markdownDraft || 'Sin especificación todavía.'}</pre>
+        </div>
+        <div className="form-actions">
+          <button disabled={busy || !titleDraft.trim()}>{busy ? 'Guardando…' : 'Guardar especificación'}</button>
+          <button className="secondary-action" type="button" onClick={onClose}>Cerrar</button>
+        </div>
+      </form>
+
+      <section className="task-modal-docs" aria-label="Documentación de tarea">
+        <div className="section-heading compact">
+          <span>Documentación</span>
+          <h2>Notas, bloqueos, resultados y QA</h2>
+        </div>
+        <ol className="task-documents">
+          {documents.map((document) => <li key={document.id}><strong>{document.kind}</strong><p>{document.body}</p><small>{document.author.displayName} · {formatDate(document.createdAt)}</small></li>)}
+          {documents.length === 0 && <li className="empty-column">Sin documentación todavía.</li>}
+        </ol>
+        <textarea value={documentDraft} onChange={(event) => onDocumentDraftChange(event.target.value)} placeholder="Añadir nota, resultado, bloqueo o QA…" rows={3} />
+        <button type="button" disabled={busy || !documentDraft.trim()} onClick={onDocument}>Documentar</button>
+      </section>
+    </section>
+  </div>;
 }
 
 function GroupAdminPanel({ groups, profiles, activeGroupId, isOpen, onOpenChange, onSave, onDelete }: { groups: AgoraGroup[]; profiles: ProfileStatus[]; activeGroupId: string | null; isOpen: boolean; onOpenChange: (open: boolean) => void; onSave: (name: string, memberProfileIds: string[], groupId?: string) => Promise<void>; onDelete: (groupId: string) => Promise<void> }) {

@@ -154,7 +154,8 @@ dd { margin: 0; color: #e2e8f0; font-size: 0.88rem; }
 .kanban-column h3 span { color: var(--muted); font-weight: 650; border: 1px solid var(--border); border-radius: 999px; padding: 0.08rem 0.45rem; }
 .status-blocked { border-color: rgba(217, 119, 6, 0.38); }
 .status-done { border-color: rgba(22, 163, 74, 0.34); }
-.task-card { border: 1px solid var(--border-soft); border-radius: 14px; padding: 0.75rem; background: linear-gradient(180deg, rgba(17, 24, 39, 0.98), rgba(15, 23, 42, 0.98)); display: grid; gap: 0.62rem; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.16); }
+.task-card { width: 100%; text-align: left; border: 1px solid var(--border-soft); border-radius: 14px; padding: 0.75rem; background: linear-gradient(180deg, rgba(17, 24, 39, 0.98), rgba(15, 23, 42, 0.98)); color: var(--text); display: grid; gap: 0.62rem; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.16); cursor: pointer; }
+.task-card:hover, .task-card:focus-visible { border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22), 0 0 0 2px rgba(59, 130, 246, 0.14); outline: none; }
 .task-card-head { display: grid; gap: 0.48rem; }
 .task-card-head strong { line-height: 1.25; }
 .task-card-head select { padding: 0.46rem 0.55rem; font-size: 0.78rem; }
@@ -170,6 +171,20 @@ dd { margin: 0; color: #e2e8f0; font-size: 0.88rem; }
 .form-hint { margin: 0; color: var(--muted); font-size: 0.84rem; line-height: 1.4; }
 .project-access-summary { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .project-access-summary span { border: 1px solid rgba(59, 130, 246, 0.26); border-radius: 999px; padding: 0.42rem 0.66rem; background: rgba(59, 130, 246, 0.08); color: #dbeafe; font-size: 0.84rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.task-modal-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: start center; padding: clamp(0.75rem, 3vw, 2rem); background: rgba(2, 6, 23, 0.72); backdrop-filter: blur(8px); overflow-y: auto; }
+.task-modal { width: min(980px, 100%); border: 1px solid var(--border); border-radius: 18px; background: #111827; box-shadow: 0 28px 80px rgba(0, 0, 0, 0.5); display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr); gap: 0; overflow: hidden; }
+.task-modal-header { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; padding: 1rem 1.1rem; border-bottom: 1px solid var(--border); background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.94)); }
+.task-modal-header h2 { margin: 0.2rem 0 0; color: #f8fafc; font-size: clamp(1.2rem, 2vw, 1.7rem); letter-spacing: -0.035em; }
+.task-modal-header p { margin: 0.32rem 0 0; color: var(--muted); }
+.task-modal-kicker, .markdown-preview span { color: #93c5fd; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.72rem; font-weight: 700; }
+.task-spec-form, .task-modal-docs { display: grid; align-content: start; gap: 0.85rem; padding: 1rem; }
+.task-spec-form { border-right: 1px solid var(--border); }
+.task-spec-form label { display: grid; gap: 0.42rem; color: var(--muted); }
+.markdown-editor { min-height: 280px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; line-height: 1.55; }
+.markdown-preview { border: 1px solid var(--border-soft); border-radius: 14px; padding: 0.85rem; background: rgba(15, 23, 42, 0.7); display: grid; gap: 0.45rem; }
+.markdown-preview pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: #cbd5e1; font-family: inherit; line-height: 1.5; }
+.task-modal-docs .task-documents { max-height: 300px; overflow-y: auto; }
+.task-modal-docs button { width: 100%; }
 @media (max-width: 1100px) {
   .shell { grid-template-columns: 250px minmax(0, 1fr); }
   .mobile-admin-toggle { display: block; }
@@ -179,6 +194,8 @@ dd { margin: 0; color: #e2e8f0; font-size: 0.88rem; }
   .project-header-actions { min-width: 0; }
   .project-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .task-create-form { grid-template-columns: 1fr 1fr; }
+  .task-modal { grid-template-columns: 1fr; }
+  .task-spec-form { border-right: 0; border-bottom: 1px solid var(--border); }
 }
 @media (max-width: 760px) {
   body { height: 100dvh; min-height: 100dvh; }
@@ -232,4 +249,8 @@ dd { margin: 0; color: #e2e8f0; font-size: 0.88rem; }
   .access-summary-card { grid-template-columns: 1fr; }
   .task-create-form { grid-template-columns: 1fr; }
   .kanban-board { min-width: 0; grid-template-columns: 1fr; }
+  .task-modal-backdrop { place-items: stretch; padding: 0; }
+  .task-modal { width: 100%; min-height: 100dvh; border-radius: 0; border-left: 0; border-right: 0; }
+  .task-modal-header { position: sticky; top: 0; z-index: 1; }
+  .markdown-editor { min-height: 220px; }
 }
