@@ -141,10 +141,38 @@ export interface WhiteboardStroke {
   points: WhiteboardPoint[];
 }
 
+export type WhiteboardDiagramNodeKind = 'rectangle' | 'circle' | 'diamond' | 'terminator' | 'note';
+
+export interface WhiteboardDiagramNode {
+  id: string;
+  kind: WhiteboardDiagramNodeKind;
+  label: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string;
+  fill?: string;
+}
+
+export interface WhiteboardDiagramConnector {
+  id: string;
+  fromNodeId: string;
+  toNodeId: string;
+  label?: string;
+  color: string;
+}
+
+export interface WhiteboardDiagram {
+  nodes: WhiteboardDiagramNode[];
+  connectors: WhiteboardDiagramConnector[];
+}
+
 export interface TaskWhiteboard {
   taskId: string;
   title: string;
   strokes: WhiteboardStroke[];
+  diagram: WhiteboardDiagram;
   updatedAt: string;
   updatedBy: Author;
 }

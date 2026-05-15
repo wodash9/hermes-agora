@@ -93,7 +93,7 @@ curl -sS -X PATCH "$HERMES_AGORA_URL/api/v1/projects/<project-id>/tasks/<task-id
 
 ## MCP whiteboard para agentes
 
-El repo incluye un servidor MCP stdio para que perfiles Hermes creen esquemas visuales en whiteboards de cards sin construir manualmente todo el JSON.
+El repo incluye un servidor MCP stdio para que perfiles Hermes creen esquemas visuales en whiteboards de cards sin construir manualmente todo el JSON. Además del canvas de trazos/formas, el payload guarda un modelo `diagram` tipo Draw.io con nodos y conectores editables desde la UI.
 
 Tools expuestas:
 
@@ -102,6 +102,8 @@ Tools expuestas:
 - `agora_get_task_whiteboard`: lee el whiteboard de una card.
 - `agora_set_task_whiteboard_shapes`: reemplaza el whiteboard con rectángulos, círculos, flechas y trazos.
 - `agora_append_task_whiteboard_shapes`: añade formas conservando lo existente.
+- `agora_set_task_whiteboard_diagram`: reemplaza el whiteboard por un diagrama tipo Draw.io con nodos (`rectangle`, `circle`, `diamond`, `terminator`, `note`) y conectores.
+- `agora_append_task_whiteboard_diagram`: añade nodos/conectores al diagrama existente conservando lo anterior.
 
 Ejecución local:
 
@@ -133,9 +135,11 @@ Formato de elementos aceptado por el MCP:
   "taskId": "task_xxx",
   "title": "Esquema agente",
   "elements": [
-    { "kind": "rectangle", "label": "Card To Do", "x": 60, "y": 80, "width": 180, "height": 90 },
-    { "kind": "circle", "label": "Agente", "x": 360, "y": 125, "radius": 48 },
-    { "kind": "arrow", "label": "crea esquema", "x1": 240, "y1": 125, "x2": 312, "y2": 125 }
+    { "kind": "rectangle", "id": "card", "label": "Card To Do", "x": 60, "y": 80, "width": 180, "height": 90 },
+    { "kind": "diamond", "id": "decision", "label": "¿Listo?", "x": 300, "y": 70, "width": 130, "height": 110 },
+    { "kind": "terminator", "id": "done", "label": "DONE", "x": 520, "y": 90, "width": 160, "height": 70 },
+    { "kind": "arrow", "label": "validar", "fromNodeId": "card", "toNodeId": "decision", "x1": 240, "y1": 125, "x2": 300, "y2": 125 },
+    { "kind": "arrow", "label": "aprobar", "fromNodeId": "decision", "toNodeId": "done", "x1": 430, "y1": 125, "x2": 520, "y2": 125 }
   ]
 }
 ```

@@ -382,6 +382,7 @@ describe('agent API', () => {
       .expect(200);
     expect(emptyWhiteboard.body.taskId).toBe(task.body.id);
     expect(emptyWhiteboard.body.strokes).toEqual([]);
+    expect(emptyWhiteboard.body.diagram).toEqual({ nodes: [], connectors: [] });
 
     const whiteboard = await request(app)
       .patch(`/api/v1/projects/${project.body.id}/tasks/${task.body.id}/whiteboard`)
@@ -393,12 +394,21 @@ describe('agent API', () => {
           { id: 'rect_1', kind: 'rectangle', color: '#93c5fd', fill: '#0f172a', size: 3, label: 'UI', points: [{ x: 10, y: 10 }, { x: 120, y: 80 }] },
           { id: 'circle_1', kind: 'circle', color: '#a7f3d0', size: 2, label: 'Agente', points: [{ x: 220, y: 40 }, { x: 300, y: 120 }] },
           { id: 'arrow_1', kind: 'arrow', color: '#fbbf24', size: 4, label: 'evento', points: [{ x: 120, y: 45 }, { x: 220, y: 80 }] }
-        ]
+        ],
+        diagram: {
+          nodes: [
+            { id: 'node_ui', kind: 'rectangle', label: 'UI', x: 60, y: 80, width: 180, height: 90, color: '#93c5fd', fill: '#172033' },
+            { id: 'node_agent', kind: 'circle', label: 'Agente', x: 360, y: 70, width: 120, height: 120, color: '#a7f3d0', fill: '#123026' }
+          ],
+          connectors: [{ id: 'conn_evento', label: 'evento', fromNodeId: 'node_ui', toNodeId: 'node_agent', color: '#fbbf24' }]
+        }
       })
       .expect(200);
     expect(whiteboard.body.title).toBe('Flujo de pantalla');
     expect(whiteboard.body.strokes.map((stroke: { kind: string }) => stroke.kind)).toEqual(['rectangle', 'circle', 'arrow']);
     expect(whiteboard.body.strokes[0]).toMatchObject({ label: 'UI', fill: '#0f172a' });
+    expect(whiteboard.body.diagram.nodes.map((node: { kind: string }) => node.kind)).toEqual(['rectangle', 'circle']);
+    expect(whiteboard.body.diagram.connectors[0]).toMatchObject({ fromNodeId: 'node_ui', toNodeId: 'node_agent', label: 'evento' });
 
     const renamedWhiteboard = await request(app)
       .patch(`/api/v1/projects/${project.body.id}/tasks/${task.body.id}/whiteboard`)
@@ -408,6 +418,7 @@ describe('agent API', () => {
       .expect(200);
     expect(renamedWhiteboard.body.title).toBe('Flujo refinado');
     expect(renamedWhiteboard.body.strokes[2]).toMatchObject({ kind: 'arrow', label: 'evento' });
+    expect(renamedWhiteboard.body.diagram.connectors[0]).toMatchObject({ fromNodeId: 'node_ui', toNodeId: 'node_agent' });
 
     await request(app)
       .patch(`/api/v1/projects/${project.body.id}/tasks/${task.body.id}/whiteboard`)

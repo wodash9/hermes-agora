@@ -1,6 +1,6 @@
 import { type FormEvent, type PointerEvent as ReactPointerEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
-import type { AgoraGroup, AgoraMessage, AgoraProject, AgoraTask, Identity, KanbanStatus, ProfileStatus, TaskDocument, TaskWhiteboard, WhiteboardStroke } from '../shared/types';
+import type { AgoraGroup, AgoraMessage, AgoraProject, AgoraTask, Identity, KanbanStatus, ProfileStatus, TaskDocument, TaskWhiteboard, WhiteboardDiagram, WhiteboardDiagramConnector, WhiteboardDiagramNode, WhiteboardStroke } from '../shared/types';
 import { createClientAuthConfig, initKeycloak, isMockAllowed, logoutKeycloak } from './auth';
 import { appendTaskDocument, createGroup, createProject, createProjectTask, deleteGroup, deleteProject, fetchGroupMessages, fetchGroups, fetchIdentity, fetchMessages, fetchProfileStatuses, fetchProjectTasks, fetchProjects, fetchTaskDocuments, fetchTaskWhiteboard, postGroupMessage, postMessage, updateGroup, updateProject, updateProjectTask, updateTaskWhiteboard, buildSocketAuth } from './api';
 import { ACTION_OPTIONS, DIRECTED_TARGET_ALL, applyComposerAction, buildRecipientOptions, buildTargetMetadata, toggleMemberSelection, type ComposerAction } from './uiState';
@@ -257,10 +257,10 @@ export function App() {
     setTaskWhiteboards((current) => ({ ...current, [taskId]: whiteboard }));
   }
 
-  async function handleSaveTaskWhiteboard(projectId: string, task: AgoraTask, title: string, strokes: WhiteboardStroke[]) {
+  async function handleSaveTaskWhiteboard(projectId: string, task: AgoraTask, title: string, strokes: WhiteboardStroke[], diagram: WhiteboardDiagram) {
     if (!token) return;
     try {
-      const whiteboard = await updateTaskWhiteboard(token, projectId, task.id, { title, strokes });
+      const whiteboard = await updateTaskWhiteboard(token, projectId, task.id, { title, strokes, diagram });
       setTaskWhiteboards((current) => ({ ...current, [task.id]: whiteboard }));
       await handleProjectRefresh(projectId);
     } catch (err) {
@@ -498,7 +498,7 @@ function ProjectsScreen({ projects, groups, profiles, identity, activeProject, t
   onAppendDocument: (projectId: string, task: AgoraTask, body: string) => Promise<void>;
   onLoadDocuments: (projectId: string, taskId: string) => Promise<void>;
   onLoadWhiteboard: (projectId: string, taskId: string) => Promise<void>;
-  onSaveWhiteboard: (projectId: string, task: AgoraTask, title: string, strokes: WhiteboardStroke[]) => Promise<void>;
+  onSaveWhiteboard: (projectId: string, task: AgoraTask, title: string, strokes: WhiteboardStroke[], diagram: WhiteboardDiagram) => Promise<void>;
 }) {
   const [projectPanel, setProjectPanel] = useState<ProjectPanel>('board');
   const [projectName, setProjectName] = useState('');
@@ -579,11 +579,11 @@ function ProjectsScreen({ projects, groups, profiles, identity, activeProject, t
     }
   }
 
-  async function saveTaskWhiteboard(task: AgoraTask, title: string, strokes: WhiteboardStroke[]) {
+  async function saveTaskWhiteboard(task: AgoraTask, title: string, strokes: WhiteboardStroke[], diagram: WhiteboardDiagram) {
     if (!activeProject) return;
     setBusy(true);
     try {
-      await onSaveWhiteboard(activeProject.id, task, title, strokes);
+      await onSaveWhiteboard(activeProject.id, task, title, strokes, diagram);
     } finally {
       setBusy(false);
     }
@@ -796,7 +796,7 @@ function TaskDetailModal({ task, projectId, documents, whiteboard, documentDraft
   onSaveSpecification: (task: AgoraTask, title: string, description: string) => Promise<void>;
   onLoadDocuments: (projectId: string, taskId: string) => Promise<void>;
   onLoadWhiteboard: (projectId: string, taskId: string) => Promise<void>;
-  onSaveWhiteboard: (task: AgoraTask, title: string, strokes: WhiteboardStroke[]) => Promise<void>;
+  onSaveWhiteboard: (task: AgoraTask, title: string, strokes: WhiteboardStroke[], diagram: WhiteboardDiagram) => Promise<void>;
   onDocumentDraftChange: (value: string) => void;
   onDocument: () => void;
 }) {
@@ -889,10 +889,12 @@ function TaskWhiteboardSketch({ task, whiteboard, busy, onSave }: {
   task: AgoraTask;
   whiteboard: TaskWhiteboard | null;
   busy: boolean;
-  onSave: (task: AgoraTask, title: string, strokes: WhiteboardStroke[]) => Promise<void>;
+  onSave: (task: AgoraTask, title: string, strokes: WhiteboardStroke[], diagram: WhiteboardDiagram) => Promise<void>;
 }) {
   const [titleDraft, setTitleDraft] = useState(whiteboard?.title ?? `${task.title} whiteboard`);
   const [strokes, setStrokes] = useState<WhiteboardStroke[]>(whiteboard?.strokes ?? []);
+  const [diagram, setDiagram] = useState<WhiteboardDiagram>(whiteboard?.diagram ?? emptyWhiteboardDiagram());
+  const [selectedDiagramNodeIds, setSelectedDiagramNodeIds] = useState<string[]>([]);
   const [activeStrokeId, setActiveStrokeId] = useState<string | null>(null);
   const [tool, setTool] = useState<WhiteboardTool>('freehand');
   const [color, setColor] = useState('#93c5fd');
@@ -901,6 +903,8 @@ function TaskWhiteboardSketch({ task, whiteboard, busy, onSave }: {
   useEffect(() => {
     setTitleDraft(whiteboard?.title ?? `${task.title} whiteboard`);
     setStrokes(whiteboard?.strokes ?? []);
+    setDiagram(whiteboard?.diagram ?? emptyWhiteboardDiagram());
+    setSelectedDiagramNodeIds([]);
     setActiveStrokeId(null);
   }, [task.id, task.title, whiteboard?.title, whiteboard?.updatedAt]);
 
@@ -936,20 +940,96 @@ function TaskWhiteboardSketch({ task, whiteboard, busy, onSave }: {
     setActiveStrokeId(null);
   }
 
+  function addDiagramNode(kind: WhiteboardDiagramNode['kind']) {
+    const index = diagram.nodes.length + 1;
+    const x = 70 + ((index - 1) % 3) * 225;
+    const y = 70 + Math.floor((index - 1) / 3) * 125;
+    const node: WhiteboardDiagramNode = {
+      id: `node_${kind}_${Date.now().toString(36)}_${index}`,
+      kind,
+      label: diagramKindLabel(kind),
+      x,
+      y,
+      width: kind === 'circle' ? 116 : 180,
+      height: kind === 'circle' ? 116 : kind === 'terminator' ? 72 : 90,
+      color: color,
+      fill: diagramFill(kind)
+    };
+    setDiagram((current) => ({ ...current, nodes: [...current.nodes, node].slice(-60) }));
+    setSelectedDiagramNodeIds([node.id]);
+  }
+
+  function connectSelectedDiagramNodes() {
+    const existingNodeIds = new Set(diagram.nodes.map((node) => node.id));
+    const selected = selectedDiagramNodeIds.filter((nodeId) => existingNodeIds.has(nodeId)).slice(-2);
+    if (selected.length < 2) return;
+    const [fromNodeId, toNodeId] = selected;
+    const connector: WhiteboardDiagramConnector = {
+      id: `connector_${Date.now().toString(36)}`,
+      fromNodeId,
+      toNodeId,
+      label: 'flujo',
+      color: '#fbbf24'
+    };
+    setDiagram((current) => ({ ...current, connectors: [...current.connectors, connector].slice(-80) }));
+  }
+
+  function toggleDiagramNodeSelection(nodeId: string) {
+    setSelectedDiagramNodeIds((current) => current.includes(nodeId) ? current.filter((id) => id !== nodeId) : [...current, nodeId].slice(-2));
+  }
+
+  function updateSelectedNodeLabel(label: string) {
+    const selected = selectedDiagramNodeIds.at(-1);
+    if (!selected) return;
+    setDiagram((current) => ({
+      ...current,
+      nodes: current.nodes.map((node) => node.id === selected ? { ...node, label } : node)
+    }));
+  }
+
+  function moveSelectedNode(dx: number, dy: number) {
+    const selected = selectedDiagramNodeIds.at(-1);
+    if (!selected) return;
+    setDiagram((current) => ({
+      ...current,
+      nodes: current.nodes.map((node) => node.id === selected ? { ...node, x: Math.max(0, Math.min(760, node.x + dx)), y: Math.max(0, Math.min(390, node.y + dy)) } : node)
+    }));
+  }
+
   async function saveWhiteboard(event: FormEvent) {
     event.preventDefault();
-    await onSave(task, titleDraft, strokes);
+    await onSave(task, titleDraft, strokes, diagram);
   }
+
+  const selectedNode = diagram.nodes.find((node) => node.id === selectedDiagramNodeIds.at(-1));
 
   return <form className="whiteboard-panel" onSubmit={saveWhiteboard} aria-label="Whiteboard asignado a la card">
     <div className="section-heading compact">
       <span>Whiteboard asignado</span>
-      <h2>Esbozos rápidos de la card</h2>
-      <p>Dibuja flujo, arquitectura o layout. Se guarda vinculado a esta tarjeta y los agentes pueden actualizarlo vía MCP.</p>
+      <h2>Modo diagrama tipo Draw.io</h2>
+      <p>Crea esquemas con nodos, conectores y trazos. Se guarda vinculado a esta tarjeta y los agentes pueden actualizarlo vía MCP.</p>
     </div>
     <label>Título del tablero
       <input value={titleDraft} onChange={(event) => setTitleDraft(event.target.value)} placeholder="Ej. Flujo UI" />
     </label>
+    <div className="whiteboard-diagram-toolbar" aria-label="Herramientas de diagrama tipo Draw.io">
+      <button type="button" className="secondary-action" onClick={() => addDiagramNode('rectangle')}>Añadir proceso</button>
+      <button type="button" className="secondary-action" onClick={() => addDiagramNode('diamond')}>Añadir decisión</button>
+      <button type="button" className="secondary-action" onClick={() => addDiagramNode('terminator')}>Añadir inicio/fin</button>
+      <button type="button" className="secondary-action" onClick={() => addDiagramNode('note')}>Añadir nota</button>
+      <button type="button" className="secondary-action" disabled={selectedDiagramNodeIds.length < 2} onClick={connectSelectedDiagramNodes}>Conectar seleccionados</button>
+    </div>
+    {selectedNode && <div className="whiteboard-node-inspector">
+      <label>Nodo seleccionado
+        <input value={selectedNode.label} onChange={(event) => updateSelectedNodeLabel(event.target.value)} />
+      </label>
+      <div className="whiteboard-nudge-grid" aria-label="Mover nodo seleccionado">
+        <button type="button" onClick={() => moveSelectedNode(0, -12)}>↑</button>
+        <button type="button" onClick={() => moveSelectedNode(-12, 0)}>←</button>
+        <button type="button" onClick={() => moveSelectedNode(12, 0)}>→</button>
+        <button type="button" onClick={() => moveSelectedNode(0, 12)}>↓</button>
+      </div>
+    </div>}
     <div className="whiteboard-toolbar">
       <div className="whiteboard-tool-group" role="group" aria-label="Herramientas del whiteboard">
         {WHITEBOARD_TOOLS.map((item) => <button
@@ -962,8 +1042,8 @@ function TaskWhiteboardSketch({ task, whiteboard, busy, onSave }: {
       </div>
       <label>Color<input type="color" value={color} onChange={(event) => setColor(event.target.value)} aria-label="Color del trazo" /></label>
       <label>Grosor<input type="range" min="1" max="12" value={size} onChange={(event) => setSize(Number(event.target.value))} aria-label="Grosor del trazo" /></label>
-      <button type="button" className="secondary-action" disabled={busy || strokes.length === 0} onClick={() => setStrokes((current) => current.slice(0, -1))}>Deshacer</button>
-      <button type="button" className="secondary-action" disabled={busy || strokes.length === 0} onClick={() => setStrokes([])}>Limpiar</button>
+      <button type="button" className="secondary-action" disabled={busy || (strokes.length === 0 && diagram.nodes.length === 0)} onClick={() => { setStrokes((current) => current.slice(0, -1)); setDiagram((current) => current.connectors.length ? { ...current, connectors: current.connectors.slice(0, -1) } : { ...current, nodes: current.nodes.slice(0, -1) }); }}>Deshacer</button>
+      <button type="button" className="secondary-action" disabled={busy || (strokes.length === 0 && diagram.nodes.length === 0)} onClick={() => { setStrokes([]); setDiagram(emptyWhiteboardDiagram()); setSelectedDiagramNodeIds([]); }}>Limpiar</button>
     </div>
     <svg
       className="whiteboard-canvas"
@@ -982,13 +1062,73 @@ function TaskWhiteboardSketch({ task, whiteboard, busy, onSave }: {
       </defs>
       <rect x="0" y="0" width="800" height="420" rx="18" />
       <path className="whiteboard-grid-line" d="M0 105H800 M0 210H800 M0 315H800 M200 0V420 M400 0V420 M600 0V420" />
+      {renderWhiteboardDiagram(diagram, selectedDiagramNodeIds, toggleDiagramNodeSelection)}
       {strokes.map((stroke) => renderWhiteboardShape(stroke))}
     </svg>
     <div className="form-actions">
       <button disabled={busy || !titleDraft.trim()}>{busy ? 'Guardando…' : 'Guardar whiteboard'}</button>
-      <small>{strokes.length} elementos · {whiteboard ? `última edición ${formatDate(whiteboard.updatedAt)}` : 'sin guardar todavía'}</small>
+      <small>{diagram.nodes.length} nodos · {diagram.connectors.length} conectores · {strokes.length} trazos · {whiteboard ? `última edición ${formatDate(whiteboard.updatedAt)}` : 'sin guardar todavía'}</small>
     </div>
   </form>;
+}
+
+function emptyWhiteboardDiagram(): WhiteboardDiagram {
+  return { nodes: [], connectors: [] };
+}
+
+function diagramKindLabel(kind: WhiteboardDiagramNode['kind']): string {
+  if (kind === 'diamond') return 'Decisión';
+  if (kind === 'circle') return 'Entidad';
+  if (kind === 'terminator') return 'Inicio / fin';
+  if (kind === 'note') return 'Nota';
+  return 'Proceso';
+}
+
+function diagramFill(kind: WhiteboardDiagramNode['kind']): string {
+  if (kind === 'diamond') return '#312410';
+  if (kind === 'circle') return '#123026';
+  if (kind === 'terminator') return '#251b44';
+  if (kind === 'note') return '#28331a';
+  return '#172033';
+}
+
+function renderWhiteboardDiagram(diagram: WhiteboardDiagram, selectedNodeIds: string[], onSelectNode: (nodeId: string) => void) {
+  const nodesById = new Map(diagram.nodes.map((node) => [node.id, node]));
+  return <g className="whiteboard-diagram-layer">
+    {diagram.connectors.map((connector) => {
+      const from = nodesById.get(connector.fromNodeId);
+      const to = nodesById.get(connector.toNodeId);
+      if (!from || !to) return null;
+      const start = diagramNodeCenter(from);
+      const end = diagramNodeCenter(to);
+      return <g key={connector.id} className="whiteboard-connector">
+        <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke={connector.color} strokeWidth="3" markerEnd="url(#whiteboard-arrowhead)" />
+        {connector.label && <text className="whiteboard-shape-label" x={(start.x + end.x) / 2} y={(start.y + end.y) / 2 - 12}>{connector.label}</text>}
+      </g>;
+    })}
+    {diagram.nodes.map((node) => <g
+      key={node.id}
+      className={`whiteboard-diagram-node ${selectedNodeIds.includes(node.id) ? 'selected' : ''}`}
+      role="button"
+      tabIndex={0}
+      onPointerDown={(event) => { event.stopPropagation(); onSelectNode(node.id); }}
+    >
+      {renderDiagramNodeBody(node)}
+      <text className="whiteboard-shape-label" x={node.x + node.width / 2} y={node.y + node.height / 2 + 4}>{node.label}</text>
+    </g>)}
+  </g>;
+}
+
+function renderDiagramNodeBody(node: WhiteboardDiagramNode) {
+  if (node.kind === 'circle') return <ellipse cx={node.x + node.width / 2} cy={node.y + node.height / 2} rx={node.width / 2} ry={node.height / 2} fill={node.fill ?? '#123026'} stroke={node.color} strokeWidth="3" />;
+  if (node.kind === 'diamond') return <path d={`M ${node.x + node.width / 2} ${node.y} L ${node.x + node.width} ${node.y + node.height / 2} L ${node.x + node.width / 2} ${node.y + node.height} L ${node.x} ${node.y + node.height / 2} Z`} fill={node.fill ?? '#312410'} stroke={node.color} strokeWidth="3" />;
+  if (node.kind === 'terminator') return <rect x={node.x} y={node.y} width={node.width} height={node.height} rx="28" fill={node.fill ?? '#251b44'} stroke={node.color} strokeWidth="3" />;
+  if (node.kind === 'note') return <path d={`M ${node.x} ${node.y} H ${node.x + node.width - 20} L ${node.x + node.width} ${node.y + 20} V ${node.y + node.height} H ${node.x} Z`} fill={node.fill ?? '#28331a'} stroke={node.color} strokeWidth="3" />;
+  return <rect x={node.x} y={node.y} width={node.width} height={node.height} rx="12" fill={node.fill ?? '#172033'} stroke={node.color} strokeWidth="3" />;
+}
+
+function diagramNodeCenter(node: WhiteboardDiagramNode): { x: number; y: number } {
+  return { x: node.x + node.width / 2, y: node.y + node.height / 2 };
 }
 
 function renderWhiteboardShape(stroke: WhiteboardStroke) {
@@ -1013,7 +1153,7 @@ function renderWhiteboardShape(stroke: WhiteboardStroke) {
   if (kind === 'arrow') {
     return <g key={stroke.id} className="whiteboard-shape"><line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke={stroke.color} strokeWidth={stroke.size} strokeLinecap="round" markerEnd="url(#whiteboard-arrowhead)" />{label}</g>;
   }
-  return <path key={stroke.id} d={strokePath(stroke.points)} fill="none" stroke={stroke.color} strokeWidth={stroke.size} strokeLinecap="round" strokeLinejoin="round" />;
+  return <path key={stroke.id} className="whiteboard-freehand" d={strokePath(stroke.points)} fill="none" stroke={stroke.color} strokeWidth={stroke.size} strokeLinecap="round" strokeLinejoin="round" />;
 }
 
 function strokePath(points: Array<{ x: number; y: number }>): string {

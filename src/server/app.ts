@@ -5,7 +5,7 @@ import type { ServerConfig } from './config.js';
 import { requireIdentity, requireScope, type AuthenticatedRequest } from './auth.js';
 import { SQLiteMessageStore, normalizeChannel, normalizeGroupId, normalizeProjectId, parseKanbanStatus, parseProfilePresence, parseProjectStatus, parseTaskDocumentKind } from './store.js';
 import { canAccessChannel } from './auth.js';
-import type { AgoraGroup, AgoraMessage, AgoraProject, AgoraTask, Identity, TaskDocument, TaskWhiteboard, WhiteboardStroke } from '../shared/types.js';
+import type { AgoraGroup, AgoraMessage, AgoraProject, AgoraTask, Identity, TaskDocument, TaskWhiteboard, WhiteboardDiagram, WhiteboardStroke } from '../shared/types.js';
 
 export interface AgoraEvents {
   on(event: 'message:new', listener: (message: AgoraMessage) => void): this;
@@ -340,6 +340,7 @@ export async function createAgoraApp({ config, store }: CreateAgoraAppOptions) {
       const whiteboard = await store.updateTaskWhiteboard(project.id, String(req.params.taskId), {
         title: typeof req.body.title === 'string' ? req.body.title : undefined,
         strokes: req.body.strokes === undefined ? undefined : parseWhiteboardStrokes(req.body.strokes),
+        diagram: req.body.diagram === undefined ? undefined : parseWhiteboardDiagram(req.body.diagram),
         updatedBy: req.identity!
       });
       const task = store.getProjectTask(project.id, String(req.params.taskId));
@@ -522,6 +523,41 @@ function parseWhiteboardStrokes(value: unknown): WhiteboardStroke[] {
       })
     };
   });
+}
+
+function parseWhiteboardDiagram(value: unknown): WhiteboardDiagram {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('diagram must be an object');
+  const diagram = value as Record<string, unknown>;
+  if (!Array.isArray(diagram.nodes)) throw new Error('diagram.nodes must be an array');
+  if (!Array.isArray(diagram.connectors)) throw new Error('diagram.connectors must be an array');
+  return {
+    nodes: diagram.nodes.map((item) => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('Invalid diagram node');
+      const node = item as Record<string, unknown>;
+      return {
+        id: typeof node.id === 'string' ? node.id : '',
+        kind: typeof node.kind === 'string' ? node.kind as WhiteboardDiagram['nodes'][number]['kind'] : 'rectangle',
+        label: typeof node.label === 'string' ? node.label : '',
+        x: Number(node.x),
+        y: Number(node.y),
+        width: Number(node.width),
+        height: Number(node.height),
+        color: typeof node.color === 'string' ? node.color : '#93c5fd',
+        fill: typeof node.fill === 'string' ? node.fill : undefined
+      };
+    }),
+    connectors: diagram.connectors.map((item) => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('Invalid diagram connector');
+      const connector = item as Record<string, unknown>;
+      return {
+        id: typeof connector.id === 'string' ? connector.id : '',
+        fromNodeId: typeof connector.fromNodeId === 'string' ? connector.fromNodeId : '',
+        toNodeId: typeof connector.toNodeId === 'string' ? connector.toNodeId : '',
+        label: typeof connector.label === 'string' ? connector.label : undefined,
+        color: typeof connector.color === 'string' ? connector.color : '#fbbf24'
+      };
+    })
+  };
 }
 
 function buildGroupMessageMetadata(value: unknown, group: AgoraGroup): Record<string, unknown> {

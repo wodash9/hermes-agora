@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import { access, mkdir, readFile, rename } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import type { AgentProfileConfig, AgoraGroup, AgoraMessage, AgoraProject, AgoraTask, Author, GroupListResponse, KanbanStatus, MessageListResponse, ProfilePresence, ProfileStatus, ProfileStatusResponse, ProjectListResponse, ProjectStatus, TaskDocument, TaskDocumentKind, TaskDocumentListResponse, TaskListResponse, TaskWhiteboard, WhiteboardStroke } from '../shared/types.js';
+import type { AgentProfileConfig, AgoraGroup, AgoraMessage, AgoraProject, AgoraTask, Author, GroupListResponse, KanbanStatus, MessageListResponse, ProfilePresence, ProfileStatus, ProfileStatusResponse, ProjectListResponse, ProjectStatus, TaskDocument, TaskDocumentKind, TaskDocumentListResponse, TaskListResponse, TaskWhiteboard, WhiteboardDiagram, WhiteboardStroke } from '../shared/types.js';
 
 interface StoredProfileStatus {
   status: ProfilePresence;
@@ -107,6 +107,7 @@ export interface CreateTaskDocumentInput {
 export interface UpdateTaskWhiteboardInput {
   title?: string;
   strokes?: WhiteboardStroke[];
+  diagram?: WhiteboardDiagram;
   updatedBy: Author;
 }
 
@@ -178,6 +179,7 @@ type TaskWhiteboardRow = {
   task_id: string;
   title: string;
   strokes_json: string;
+  diagram_json: string;
   updated_at: string;
   updated_by_json: string;
 };
@@ -456,7 +458,7 @@ export class SQLiteMessageStore {
   defaultTaskWhiteboard(projectIdRaw: string, taskId: string): TaskWhiteboard {
     const task = this.getProjectTask(projectIdRaw, taskId);
     if (!task) throw new Error('Task not found');
-    return { taskId: task.id, title: `${task.title} whiteboard`, strokes: [], updatedAt: task.updatedAt, updatedBy: task.updatedBy ?? task.createdBy };
+    return { taskId: task.id, title: `${task.title} whiteboard`, strokes: [], diagram: defaultWhiteboardDiagram(), updatedAt: task.updatedAt, updatedBy: task.updatedBy ?? task.createdBy };
   }
 
   async updateTaskWhiteboard(projectIdRaw: string, taskId: string, input: UpdateTaskWhiteboardInput): Promise<TaskWhiteboard> {
@@ -465,8 +467,9 @@ export class SQLiteMessageStore {
     const current = this.getTaskWhiteboard(projectIdRaw, task.id);
     const title = normalizeWhiteboardTitle(input.title ?? current?.title ?? `${task.title} whiteboard`);
     const strokes = normalizeWhiteboardStrokes(input.strokes ?? current?.strokes ?? []);
+    const diagram = normalizeWhiteboardDiagram(input.diagram ?? current?.diagram ?? defaultWhiteboardDiagram());
     const now = new Date().toISOString();
-    const whiteboard: TaskWhiteboard = { taskId: task.id, title, strokes, updatedAt: now, updatedBy: input.updatedBy };
+    const whiteboard: TaskWhiteboard = { taskId: task.id, title, strokes, diagram, updatedAt: now, updatedBy: input.updatedBy };
     const tx = this.db.transaction(() => {
       this.insertTaskWhiteboard(whiteboard);
       this.db.prepare(`UPDATE tasks SET updated_at = ?, updated_by_json = ? WHERE id = ?`).run(now, toJson(input.updatedBy), task.id);
@@ -600,12 +603,19 @@ export class SQLiteMessageStore {
         task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
         title TEXT NOT NULL,
         strokes_json TEXT NOT NULL,
+        diagram_json TEXT NOT NULL DEFAULT '{"nodes":[],"connectors":[]}',
         updated_at TEXT NOT NULL,
         updated_by_json TEXT NOT NULL
       );
     `);
     this.ensureProjectSharingColumns();
+    this.ensureTaskWhiteboardColumns();
     this.db.prepare(`INSERT INTO meta (key, value) VALUES ('schema_version', '1') ON CONFLICT(key) DO NOTHING`).run();
+  }
+
+  private ensureTaskWhiteboardColumns(): void {
+    const columns = new Set((this.db.prepare(`PRAGMA table_info(task_whiteboards)`).all() as Array<{ name: string }>).map((column) => column.name));
+    if (!columns.has('diagram_json')) this.db.prepare(`ALTER TABLE task_whiteboards ADD COLUMN diagram_json TEXT NOT NULL DEFAULT '{"nodes":[],"connectors":[]}'`).run();
   }
 
   private ensureProjectSharingColumns(): void {
@@ -722,7 +732,7 @@ export class SQLiteMessageStore {
   }
 
   private insertTaskWhiteboard(whiteboard: TaskWhiteboard): void {
-    this.db.prepare(`INSERT INTO task_whiteboards (task_id, title, strokes_json, updated_at, updated_by_json) VALUES (?, ?, ?, ?, ?) ON CONFLICT(task_id) DO UPDATE SET title = excluded.title, strokes_json = excluded.strokes_json, updated_at = excluded.updated_at, updated_by_json = excluded.updated_by_json`).run(whiteboard.taskId, whiteboard.title, toJson(normalizeWhiteboardStrokes(whiteboard.strokes)), whiteboard.updatedAt, toJson(whiteboard.updatedBy));
+    this.db.prepare(`INSERT INTO task_whiteboards (task_id, title, strokes_json, diagram_json, updated_at, updated_by_json) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(task_id) DO UPDATE SET title = excluded.title, strokes_json = excluded.strokes_json, diagram_json = excluded.diagram_json, updated_at = excluded.updated_at, updated_by_json = excluded.updated_by_json`).run(whiteboard.taskId, whiteboard.title, toJson(normalizeWhiteboardStrokes(whiteboard.strokes)), toJson(normalizeWhiteboardDiagram(whiteboard.diagram)), whiteboard.updatedAt, toJson(whiteboard.updatedBy));
   }
 }
 
@@ -826,6 +836,7 @@ function rowToTaskWhiteboard(row: TaskWhiteboardRow): TaskWhiteboard {
     taskId: row.task_id,
     title: row.title,
     strokes: normalizeWhiteboardStrokes(fromJson<WhiteboardStroke[]>(row.strokes_json)),
+    diagram: normalizeWhiteboardDiagram(fromJson<WhiteboardDiagram>(row.diagram_json ?? '{"nodes":[],"connectors":[]}')),
     updatedAt: row.updated_at,
     updatedBy: fromJson<Author>(row.updated_by_json)
   };
@@ -898,6 +909,77 @@ function normalizeWhiteboardStrokes(strokes: WhiteboardStroke[]): WhiteboardStro
     if (label) normalized.label = label;
     return normalized;
   }).filter((stroke) => stroke.points.length > 0);
+}
+
+function defaultWhiteboardDiagram(): WhiteboardDiagram {
+  return { nodes: [], connectors: [] };
+}
+
+function normalizeWhiteboardDiagram(diagram: WhiteboardDiagram): WhiteboardDiagram {
+  if (!diagram || typeof diagram !== 'object' || Array.isArray(diagram)) return defaultWhiteboardDiagram();
+  if (!Array.isArray(diagram.nodes)) throw new Error('diagram.nodes must be an array');
+  if (!Array.isArray(diagram.connectors)) throw new Error('diagram.connectors must be an array');
+  const nodes = diagram.nodes.slice(-60).map((node, index) => {
+    if (!node || typeof node !== 'object') throw new Error('Invalid diagram node');
+    const id = typeof node.id === 'string' && node.id.trim() ? node.id.trim().slice(0, 80) : `node_${index}`;
+    const kind = parseWhiteboardDiagramNodeKind(node.kind);
+    const fill = node.fill === undefined ? defaultNodeFill(kind) : normalizeWhiteboardColor(node.fill, defaultNodeFill(kind));
+    return {
+      id,
+      kind,
+      label: normalizeDiagramLabel(node.label, kindLabel(kind)),
+      x: normalizeDiagramNumber(node.x, 80, 0, 760),
+      y: normalizeDiagramNumber(node.y, 80, 0, 390),
+      width: normalizeDiagramNumber(node.width, kind === 'circle' ? 110 : 180, 36, 360),
+      height: normalizeDiagramNumber(node.height, kind === 'circle' ? 110 : 88, 28, 240),
+      color: normalizeWhiteboardColor(node.color, '#93c5fd'),
+      fill
+    };
+  });
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  const connectors = diagram.connectors.slice(-80).map((connector, index) => {
+    if (!connector || typeof connector !== 'object') throw new Error('Invalid diagram connector');
+    const fromNodeId = typeof connector.fromNodeId === 'string' ? connector.fromNodeId.trim().slice(0, 80) : '';
+    const toNodeId = typeof connector.toNodeId === 'string' ? connector.toNodeId.trim().slice(0, 80) : '';
+    if (!nodeIds.has(fromNodeId) || !nodeIds.has(toNodeId)) throw new Error('Diagram connector references unknown node');
+    const label = typeof connector.label === 'string' ? connector.label.trim().replace(/\s+/g, ' ').slice(0, 80) : undefined;
+    const normalized = { id: typeof connector.id === 'string' && connector.id.trim() ? connector.id.trim().slice(0, 80) : `connector_${index}`, fromNodeId, toNodeId, color: normalizeWhiteboardColor(connector.color, '#fbbf24') };
+    return label ? { ...normalized, label } : normalized;
+  });
+  return { nodes, connectors };
+}
+
+function parseWhiteboardDiagramNodeKind(value: unknown): WhiteboardDiagram['nodes'][number]['kind'] {
+  if (value === 'rectangle' || value === 'circle' || value === 'diamond' || value === 'terminator' || value === 'note') return value;
+  return 'rectangle';
+}
+
+function normalizeDiagramNumber(value: unknown, fallback: number, min: number, max: number): number {
+  const raw = Number(value);
+  if (!Number.isFinite(raw)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(raw * 10) / 10));
+}
+
+function normalizeDiagramLabel(value: unknown, fallback: string): string {
+  if (typeof value !== 'string') return fallback;
+  const label = value.trim().replace(/\s+/g, ' ').slice(0, 80);
+  return label || fallback;
+}
+
+function kindLabel(kind: WhiteboardDiagram['nodes'][number]['kind']): string {
+  if (kind === 'circle') return 'Entidad';
+  if (kind === 'diamond') return 'Decisión';
+  if (kind === 'terminator') return 'Inicio / fin';
+  if (kind === 'note') return 'Nota';
+  return 'Proceso';
+}
+
+function defaultNodeFill(kind: WhiteboardDiagram['nodes'][number]['kind']): string {
+  if (kind === 'circle') return '#123026';
+  if (kind === 'diamond') return '#312410';
+  if (kind === 'terminator') return '#251b44';
+  if (kind === 'note') return '#28331a';
+  return '#172033';
 }
 
 function parseWhiteboardShapeKind(value: unknown): NonNullable<WhiteboardStroke['kind']> {

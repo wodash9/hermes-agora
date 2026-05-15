@@ -60,6 +60,13 @@ describe('SQLiteMessageStore', () => {
         { id: 'circle_1', kind: 'circle', color: '#a7f3d0', size: 2, label: 'Agente', points: [{ x: 260, y: 40 }, { x: 340, y: 120 }] },
         { id: 'arrow_1', kind: 'arrow', color: '#fbbf24', size: 4, label: 'PATCH whiteboard', points: [{ x: 120, y: 60 }, { x: 260, y: 80 }] }
       ],
+      diagram: {
+        nodes: [
+          { id: 'node_api', kind: 'rectangle', label: 'API', x: 80, y: 80, width: 180, height: 90, color: '#93c5fd', fill: '#172033' },
+          { id: 'node_agent', kind: 'circle', label: 'Agente', x: 360, y: 90, width: 120, height: 120, color: '#a7f3d0', fill: '#123026' }
+        ],
+        connectors: [{ id: 'conn_1', label: 'orquesta', fromNodeId: 'node_api', toNodeId: 'node_agent', color: '#fbbf24' }]
+      },
       updatedBy: author
     });
 
@@ -72,6 +79,8 @@ describe('SQLiteMessageStore', () => {
     expect(reopened.getTaskWhiteboard(project.id, task.id)?.title).toBe('Arquitectura inicial');
     expect(reopened.getTaskWhiteboard(project.id, task.id)?.strokes.map((stroke) => stroke.kind)).toEqual(['rectangle', 'circle', 'arrow']);
     expect(reopened.getTaskWhiteboard(project.id, task.id)?.strokes[0]).toMatchObject({ label: 'API', fill: '#1e293b' });
+    expect(reopened.getTaskWhiteboard(project.id, task.id)?.diagram.nodes.map((node) => node.kind)).toEqual(['rectangle', 'circle']);
+    expect(reopened.getTaskWhiteboard(project.id, task.id)?.diagram.connectors[0]).toMatchObject({ fromNodeId: 'node_api', toNodeId: 'node_agent', label: 'orquesta' });
   });
 
   it('updates project membership and task assignee pruning as one SQLite-backed mutation', async () => {

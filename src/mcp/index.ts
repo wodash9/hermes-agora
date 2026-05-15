@@ -45,6 +45,16 @@ const TOOLS: Tool[] = [
     name: 'agora_append_task_whiteboard_shapes',
     description: 'Añade formas al whiteboard existente de una tarea/card conservando los elementos previos.',
     inputSchema: whiteboardShapeInputSchema()
+  },
+  {
+    name: 'agora_set_task_whiteboard_diagram',
+    description: 'Reemplaza el whiteboard de una tarea/card por un diagrama tipo Draw.io con nodos y conectores.',
+    inputSchema: whiteboardShapeInputSchema()
+  },
+  {
+    name: 'agora_append_task_whiteboard_diagram',
+    description: 'Añade nodos y conectores tipo Draw.io al whiteboard existente de una tarea/card.',
+    inputSchema: whiteboardShapeInputSchema()
   }
 ];
 
@@ -74,12 +84,16 @@ async function callAgoraTool(name: string, args: Record<string, unknown>): Promi
     const { projectId, taskId } = taskArgs(args);
     return client.request(`/api/v1/projects/${encodeURIComponent(projectId)}/tasks/${encodeURIComponent(taskId)}/whiteboard`);
   }
-  if (name === 'agora_set_task_whiteboard_shapes' || name === 'agora_append_task_whiteboard_shapes') {
+  if (name === 'agora_set_task_whiteboard_shapes' || name === 'agora_append_task_whiteboard_shapes' || name === 'agora_set_task_whiteboard_diagram' || name === 'agora_append_task_whiteboard_diagram') {
     const { projectId, taskId } = taskArgs(args);
     const payload = buildWhiteboardDiagramPayload({ title: typeof args.title === 'string' ? args.title : undefined, elements: parseElements(args.elements) });
-    if (name === 'agora_append_task_whiteboard_shapes') {
-      const current = await client.request<{ title?: string; strokes?: unknown[] }>(`/api/v1/projects/${encodeURIComponent(projectId)}/tasks/${encodeURIComponent(taskId)}/whiteboard`);
+    if (name === 'agora_append_task_whiteboard_shapes' || name === 'agora_append_task_whiteboard_diagram') {
+      const current = await client.request<{ title?: string; strokes?: unknown[]; diagram?: { nodes?: unknown[]; connectors?: unknown[] } }>(`/api/v1/projects/${encodeURIComponent(projectId)}/tasks/${encodeURIComponent(taskId)}/whiteboard`);
       payload.strokes = [...(Array.isArray(current.strokes) ? current.strokes : []), ...payload.strokes].slice(-80) as typeof payload.strokes;
+      payload.diagram = {
+        nodes: [...(Array.isArray(current.diagram?.nodes) ? current.diagram.nodes : []), ...payload.diagram.nodes].slice(-60) as typeof payload.diagram.nodes,
+        connectors: [...(Array.isArray(current.diagram?.connectors) ? current.diagram.connectors : []), ...payload.diagram.connectors].slice(-80) as typeof payload.diagram.connectors
+      };
       payload.title ??= current.title;
     }
     return client.request(`/api/v1/projects/${encodeURIComponent(projectId)}/tasks/${encodeURIComponent(taskId)}/whiteboard`, {
@@ -126,8 +140,11 @@ function whiteboardShapeInputSchema(): Tool['inputSchema'] {
         items: {
           type: 'object',
           properties: {
-            kind: { type: 'string', enum: ['rectangle', 'circle', 'arrow', 'freehand'] },
+            kind: { type: 'string', enum: ['rectangle', 'circle', 'diamond', 'terminator', 'note', 'arrow', 'freehand'] },
+            id: { type: 'string' },
             label: { type: 'string' },
+            fromNodeId: { type: 'string' },
+            toNodeId: { type: 'string' },
             x: { type: 'number' },
             y: { type: 'number' },
             width: { type: 'number' },
