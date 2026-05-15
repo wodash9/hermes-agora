@@ -129,10 +129,15 @@ export interface WhiteboardPoint {
   y: number;
 }
 
+export type WhiteboardShapeKind = 'freehand' | 'rectangle' | 'circle' | 'arrow';
+
 export interface WhiteboardStroke {
   id: string;
+  kind?: WhiteboardShapeKind;
   color: string;
+  fill?: string;
   size: number;
+  label?: string;
   points: WhiteboardPoint[];
 }
 

@@ -510,8 +510,11 @@ function parseWhiteboardStrokes(value: unknown): WhiteboardStroke[] {
     if (stroke.points !== undefined && !Array.isArray(stroke.points)) throw new Error('Invalid whiteboard stroke points');
     return {
       id: typeof stroke.id === 'string' ? stroke.id : '',
+      kind: (typeof stroke.kind === 'string' ? stroke.kind : undefined) as WhiteboardStroke['kind'],
       color: typeof stroke.color === 'string' ? stroke.color : '#93c5fd',
+      fill: typeof stroke.fill === 'string' ? stroke.fill : undefined,
       size: typeof stroke.size === 'number' ? stroke.size : 3,
+      label: typeof stroke.label === 'string' ? stroke.label : undefined,
       points: (Array.isArray(stroke.points) ? stroke.points : []).map((point) => {
         if (!point || typeof point !== 'object' || Array.isArray(point)) throw new Error('Invalid whiteboard point');
         const raw = point as Record<string, unknown>;

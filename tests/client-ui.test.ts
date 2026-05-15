@@ -221,10 +221,16 @@ describe('mobile-responsive Agora layout CSS', () => {
     expect(appSource).toContain('onLoadWhiteboard');
     expect(appSource).toContain('onSaveWhiteboard');
     expect(appSource).toContain('Guardar whiteboard');
+    expect(appSource).toContain('Rectángulo');
+    expect(appSource).toContain('Círculo');
+    expect(appSource).toContain('Flecha');
+    expect(appSource).toContain('renderWhiteboardShape');
     expect(appSource).toContain('viewBox="0 0 800 420"');
     expect(css).toContain('pointer-events');
     expect(css).toContain('.whiteboard-panel');
     expect(css).toContain('.whiteboard-canvas');
+    expect(css).toContain('.whiteboard-tool.active');
+    expect(css).toContain('.whiteboard-shape-label');
   });
 
   it('shows an explicit logout action in the signed-in identity panel', () => {

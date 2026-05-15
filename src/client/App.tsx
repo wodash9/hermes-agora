@@ -876,6 +876,15 @@ function TaskDetailModal({ task, projectId, documents, whiteboard, documentDraft
   </div>;
 }
 
+type WhiteboardTool = NonNullable<WhiteboardStroke['kind']>;
+
+const WHITEBOARD_TOOLS: Array<{ kind: WhiteboardTool; label: string }> = [
+  { kind: 'freehand', label: 'Trazo' },
+  { kind: 'rectangle', label: 'Rectángulo' },
+  { kind: 'circle', label: 'Círculo' },
+  { kind: 'arrow', label: 'Flecha' }
+];
+
 function TaskWhiteboardSketch({ task, whiteboard, busy, onSave }: {
   task: AgoraTask;
   whiteboard: TaskWhiteboard | null;
@@ -885,6 +894,7 @@ function TaskWhiteboardSketch({ task, whiteboard, busy, onSave }: {
   const [titleDraft, setTitleDraft] = useState(whiteboard?.title ?? `${task.title} whiteboard`);
   const [strokes, setStrokes] = useState<WhiteboardStroke[]>(whiteboard?.strokes ?? []);
   const [activeStrokeId, setActiveStrokeId] = useState<string | null>(null);
+  const [tool, setTool] = useState<WhiteboardTool>('freehand');
   const [color, setColor] = useState('#93c5fd');
   const [size, setSize] = useState(3);
 
@@ -905,16 +915,21 @@ function TaskWhiteboardSketch({ task, whiteboard, busy, onSave }: {
   function beginStroke(event: ReactPointerEvent<SVGSVGElement>) {
     if (event.button !== 0) return;
     event.currentTarget.setPointerCapture(event.pointerId);
-    const id = `stroke_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+    const id = `${tool}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
     const point = pointFromEvent(event);
     setActiveStrokeId(id);
-    setStrokes((current) => [...current, { id, color, size, points: [point] }].slice(-80));
+    setStrokes((current) => [...current, { id, kind: tool, color, size, points: tool === 'freehand' ? [point] : [point, point] }].slice(-80));
   }
 
   function extendStroke(event: ReactPointerEvent<SVGSVGElement>) {
     if (!activeStrokeId || event.buttons !== 1) return;
     const point = pointFromEvent(event);
-    setStrokes((current) => current.map((stroke) => stroke.id === activeStrokeId ? { ...stroke, points: [...stroke.points, point].slice(0, 120) } : stroke));
+    setStrokes((current) => current.map((stroke) => {
+      if (stroke.id !== activeStrokeId) return stroke;
+      if ((stroke.kind ?? 'freehand') === 'freehand') return { ...stroke, points: [...stroke.points, point].slice(0, 120) };
+      const first = stroke.points[0] ?? point;
+      return { ...stroke, points: [first, point] };
+    }));
   }
 
   function endStroke() {
@@ -930,12 +945,21 @@ function TaskWhiteboardSketch({ task, whiteboard, busy, onSave }: {
     <div className="section-heading compact">
       <span>Whiteboard asignado</span>
       <h2>Esbozos rápidos de la card</h2>
-      <p>Dibuja flujo, arquitectura o layout. Se guarda vinculado a esta tarjeta.</p>
+      <p>Dibuja flujo, arquitectura o layout. Se guarda vinculado a esta tarjeta y los agentes pueden actualizarlo vía MCP.</p>
     </div>
     <label>Título del tablero
       <input value={titleDraft} onChange={(event) => setTitleDraft(event.target.value)} placeholder="Ej. Flujo UI" />
     </label>
     <div className="whiteboard-toolbar">
+      <div className="whiteboard-tool-group" role="group" aria-label="Herramientas del whiteboard">
+        {WHITEBOARD_TOOLS.map((item) => <button
+          key={item.kind}
+          type="button"
+          className={`whiteboard-tool ${tool === item.kind ? 'active' : ''}`}
+          aria-pressed={tool === item.kind}
+          onClick={() => setTool(item.kind)}
+        >{item.label}</button>)}
+      </div>
       <label>Color<input type="color" value={color} onChange={(event) => setColor(event.target.value)} aria-label="Color del trazo" /></label>
       <label>Grosor<input type="range" min="1" max="12" value={size} onChange={(event) => setSize(Number(event.target.value))} aria-label="Grosor del trazo" /></label>
       <button type="button" className="secondary-action" disabled={busy || strokes.length === 0} onClick={() => setStrokes((current) => current.slice(0, -1))}>Deshacer</button>
@@ -951,21 +975,62 @@ function TaskWhiteboardSketch({ task, whiteboard, busy, onSave }: {
       onPointerUp={endStroke}
       onPointerLeave={endStroke}
     >
+      <defs>
+        <marker id="whiteboard-arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke" />
+        </marker>
+      </defs>
       <rect x="0" y="0" width="800" height="420" rx="18" />
       <path className="whiteboard-grid-line" d="M0 105H800 M0 210H800 M0 315H800 M200 0V420 M400 0V420 M600 0V420" />
-      {strokes.map((stroke) => <path key={stroke.id} d={strokePath(stroke.points)} fill="none" stroke={stroke.color} strokeWidth={stroke.size} strokeLinecap="round" strokeLinejoin="round" />)}
+      {strokes.map((stroke) => renderWhiteboardShape(stroke))}
     </svg>
     <div className="form-actions">
       <button disabled={busy || !titleDraft.trim()}>{busy ? 'Guardando…' : 'Guardar whiteboard'}</button>
-      <small>{strokes.length} trazos · {whiteboard ? `última edición ${formatDate(whiteboard.updatedAt)}` : 'sin guardar todavía'}</small>
+      <small>{strokes.length} elementos · {whiteboard ? `última edición ${formatDate(whiteboard.updatedAt)}` : 'sin guardar todavía'}</small>
     </div>
   </form>;
+}
+
+function renderWhiteboardShape(stroke: WhiteboardStroke) {
+  const kind = stroke.kind ?? 'freehand';
+  const [start, end = start] = stroke.points;
+  if (!start) return null;
+  const label = stroke.label ? <text className="whiteboard-shape-label" x={labelX(stroke)} y={labelY(stroke)}>{stroke.label}</text> : null;
+  if (kind === 'rectangle') {
+    const x = Math.min(start.x, end.x);
+    const y = Math.min(start.y, end.y);
+    const width = Math.abs(end.x - start.x);
+    const height = Math.abs(end.y - start.y);
+    return <g key={stroke.id} className="whiteboard-shape"><rect x={x} y={y} width={width} height={height} rx="12" fill={stroke.fill ?? 'transparent'} stroke={stroke.color} strokeWidth={stroke.size} />{label}</g>;
+  }
+  if (kind === 'circle') {
+    const cx = (start.x + end.x) / 2;
+    const cy = (start.y + end.y) / 2;
+    const rx = Math.max(4, Math.abs(end.x - start.x) / 2);
+    const ry = Math.max(4, Math.abs(end.y - start.y) / 2);
+    return <g key={stroke.id} className="whiteboard-shape"><ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill={stroke.fill ?? 'transparent'} stroke={stroke.color} strokeWidth={stroke.size} />{label}</g>;
+  }
+  if (kind === 'arrow') {
+    return <g key={stroke.id} className="whiteboard-shape"><line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke={stroke.color} strokeWidth={stroke.size} strokeLinecap="round" markerEnd="url(#whiteboard-arrowhead)" />{label}</g>;
+  }
+  return <path key={stroke.id} d={strokePath(stroke.points)} fill="none" stroke={stroke.color} strokeWidth={stroke.size} strokeLinecap="round" strokeLinejoin="round" />;
 }
 
 function strokePath(points: Array<{ x: number; y: number }>): string {
   if (points.length === 0) return '';
   const [first, ...rest] = points;
   return `M ${first.x.toFixed(1)} ${first.y.toFixed(1)} ${rest.map((point) => `L ${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' ')}`;
+}
+
+function labelX(stroke: WhiteboardStroke): number {
+  const [start, end = start] = stroke.points;
+  return ((start?.x ?? 0) + (end?.x ?? start?.x ?? 0)) / 2;
+}
+
+function labelY(stroke: WhiteboardStroke): number {
+  const [start, end = start] = stroke.points;
+  const base = ((start?.y ?? 0) + (end?.y ?? start?.y ?? 0)) / 2;
+  return (stroke.kind ?? 'freehand') === 'arrow' ? base - 10 : base + 4;
 }
 
 function GroupAdminPanel({ groups, profiles, activeGroupId, isOpen, onOpenChange, onSave, onDelete }: { groups: AgoraGroup[]; profiles: ProfileStatus[]; activeGroupId: string | null; isOpen: boolean; onOpenChange: (open: boolean) => void; onSave: (name: string, memberProfileIds: string[], groupId?: string) => Promise<void>; onDelete: (groupId: string) => Promise<void> }) {

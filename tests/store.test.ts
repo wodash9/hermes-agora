@@ -55,7 +55,11 @@ describe('SQLiteMessageStore', () => {
     await store.appendTaskDocument(project.id, task.id, { kind: 'result', body: 'Hecho', author });
     await store.updateTaskWhiteboard(project.id, task.id, {
       title: 'Arquitectura inicial',
-      strokes: [{ id: 'stroke_1', color: '#93c5fd', size: 3, points: [{ x: 12, y: 16 }, { x: 80, y: 120 }] }],
+      strokes: [
+        { id: 'rect_1', kind: 'rectangle', color: '#93c5fd', fill: '#1e293b', size: 3, label: 'API', points: [{ x: 12, y: 16 }, { x: 120, y: 90 }] },
+        { id: 'circle_1', kind: 'circle', color: '#a7f3d0', size: 2, label: 'Agente', points: [{ x: 260, y: 40 }, { x: 340, y: 120 }] },
+        { id: 'arrow_1', kind: 'arrow', color: '#fbbf24', size: 4, label: 'PATCH whiteboard', points: [{ x: 120, y: 60 }, { x: 260, y: 80 }] }
+      ],
       updatedBy: author
     });
 
@@ -66,7 +70,8 @@ describe('SQLiteMessageStore', () => {
     expect(reopened.listProjectTasks(project.id).tasks[0].status).toBe('done');
     expect(reopened.listTaskDocuments(project.id, task.id).documents[0].body).toBe('Hecho');
     expect(reopened.getTaskWhiteboard(project.id, task.id)?.title).toBe('Arquitectura inicial');
-    expect(reopened.getTaskWhiteboard(project.id, task.id)?.strokes[0].points[1]).toEqual({ x: 80, y: 120 });
+    expect(reopened.getTaskWhiteboard(project.id, task.id)?.strokes.map((stroke) => stroke.kind)).toEqual(['rectangle', 'circle', 'arrow']);
+    expect(reopened.getTaskWhiteboard(project.id, task.id)?.strokes[0]).toMatchObject({ label: 'API', fill: '#1e293b' });
   });
 
   it('updates project membership and task assignee pruning as one SQLite-backed mutation', async () => {

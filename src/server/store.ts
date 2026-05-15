@@ -878,18 +878,38 @@ function normalizeWhiteboardStrokes(strokes: WhiteboardStroke[]): WhiteboardStro
   return strokes.slice(-80).map((stroke, index) => {
     if (!stroke || typeof stroke !== 'object') throw new Error('Invalid whiteboard stroke');
     const id = typeof stroke.id === 'string' && stroke.id.trim() ? stroke.id.trim().slice(0, 80) : `stroke_${index}`;
-    const color = typeof stroke.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(stroke.color) ? stroke.color : '#93c5fd';
+    const kind = parseWhiteboardShapeKind(stroke.kind);
+    const color = normalizeWhiteboardColor(stroke.color, '#93c5fd');
+    const fill = stroke.fill === undefined ? undefined : normalizeWhiteboardColor(stroke.fill, 'transparent');
+    const label = typeof stroke.label === 'string' ? stroke.label.trim().replace(/\s+/g, ' ').slice(0, 80) : undefined;
     const sizeRaw = Number(stroke.size);
     const size = Number.isFinite(sizeRaw) ? Math.min(16, Math.max(1, Math.round(sizeRaw))) : 3;
     if (!Array.isArray(stroke.points)) throw new Error('Invalid whiteboard stroke points');
-    const points = stroke.points.slice(0, 120).map((point) => {
+    const maxPoints = kind === 'freehand' ? 120 : 2;
+    const points = stroke.points.slice(0, maxPoints).map((point) => {
       const xRaw = Number(point?.x);
       const yRaw = Number(point?.y);
       if (!Number.isFinite(xRaw) || !Number.isFinite(yRaw)) throw new Error('Invalid whiteboard point');
       return { x: Math.min(800, Math.max(0, Math.round(xRaw * 10) / 10)), y: Math.min(420, Math.max(0, Math.round(yRaw * 10) / 10)) };
     });
-    return { id, color, size, points };
+    if (kind !== 'freehand' && points.length < 2) throw new Error('Whiteboard shapes need two points');
+    const normalized: WhiteboardStroke = { id, kind, color, size, points };
+    if (fill && fill !== 'transparent') normalized.fill = fill;
+    if (label) normalized.label = label;
+    return normalized;
   }).filter((stroke) => stroke.points.length > 0);
+}
+
+function parseWhiteboardShapeKind(value: unknown): NonNullable<WhiteboardStroke['kind']> {
+  if (value === undefined || value === null || value === 'freehand') return 'freehand';
+  if (value === 'rectangle' || value === 'circle' || value === 'arrow') return value;
+  throw new Error('Invalid whiteboard shape kind');
+}
+
+function normalizeWhiteboardColor(value: unknown, fallback: string): string {
+  if (typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value)) return value.toLowerCase();
+  if (fallback === 'transparent') return fallback;
+  return fallback;
 }
 
 function normalizeLabels(labels: string[]): string[] {

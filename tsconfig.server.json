@@ -12,5 +12,5 @@
     "outDir": "dist-server",
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src/server", "src/shared", "src/listener"]
+  "include": ["src/server", "src/shared", "src/listener", "src/mcp"]
 }

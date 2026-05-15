@@ -186,15 +186,19 @@ dd { margin: 0; color: #e2e8f0; font-size: 0.88rem; }
 .markdown-preview pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: #cbd5e1; font-family: inherit; line-height: 1.5; }
 .whiteboard-panel { background: rgba(15, 23, 42, 0.38); }
 .whiteboard-panel .section-heading p { font-size: 0.84rem; }
-.whiteboard-toolbar { display: grid; grid-template-columns: minmax(92px, 0.8fr) minmax(140px, 1fr) auto auto; gap: 0.5rem; align-items: end; }
+.whiteboard-toolbar { display: grid; grid-template-columns: 1fr minmax(92px, 0.45fr) minmax(140px, 0.65fr) auto auto; gap: 0.5rem; align-items: end; }
+.whiteboard-tool-group { display: flex; flex-wrap: wrap; gap: 0.35rem; align-self: end; }
+.whiteboard-tool { padding: 0.52rem 0.62rem; border-radius: 999px; border: 1px solid var(--border-soft); background: rgba(15, 23, 42, 0.82); color: var(--muted); font-size: 0.78rem; }
+.whiteboard-tool.active { border-color: rgba(96, 165, 250, 0.8); color: #dbeafe; background: rgba(59, 130, 246, 0.22); }
 .whiteboard-toolbar label { font-size: 0.78rem; }
 .whiteboard-toolbar input[type="color"] { min-height: 42px; padding: 0.28rem; }
 .whiteboard-toolbar input[type="range"] { accent-color: var(--accent); padding-inline: 0; }
 .whiteboard-toolbar button { padding: 0.58rem 0.68rem; }
 .whiteboard-canvas { width: 100%; aspect-ratio: 800 / 420; border: 1px solid rgba(96, 165, 250, 0.34); border-radius: 18px; background: #020617; touch-action: none; cursor: crosshair; }
-.whiteboard-canvas rect { fill: #020617; }
+.whiteboard-canvas > rect { fill: #020617; }
 .whiteboard-grid-line { stroke: rgba(148, 163, 184, 0.13); stroke-width: 1; pointer-events: none; }
-.whiteboard-canvas path:not(.whiteboard-grid-line) { pointer-events: none; filter: drop-shadow(0 0 4px rgba(147, 197, 253, 0.16)); }
+.whiteboard-canvas path:not(.whiteboard-grid-line), .whiteboard-shape { pointer-events: none; filter: drop-shadow(0 0 4px rgba(147, 197, 253, 0.16)); }
+.whiteboard-shape-label { fill: #e2e8f0; stroke: none; font-size: 18px; font-weight: 700; text-anchor: middle; dominant-baseline: middle; paint-order: stroke; pointer-events: none; }
 .whiteboard-panel .form-actions { align-items: center; }
 .whiteboard-panel .form-actions small { color: var(--muted); }
 .task-modal-docs .task-documents { max-height: 300px; overflow-y: auto; }

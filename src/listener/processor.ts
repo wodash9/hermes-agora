@@ -222,6 +222,8 @@ export function buildHermesPrompt(profileId: string, group: AgoraGroup, message:
     '- Puedes crear tareas: POST $HERMES_AGORA_URL/api/v1/projects/<projectId>/tasks con {"title":"...","description":"...","assigneeProfileIds":["..."]}.',
     '- Puedes mover tareas: PATCH $HERMES_AGORA_URL/api/v1/projects/<projectId>/tasks/<taskId> con {"status":"backlog|todo|in_progress|review|blocked|done"}.',
     '- Puedes documentar tareas: POST $HERMES_AGORA_URL/api/v1/projects/<projectId>/tasks/<taskId>/documents con {"kind":"note|result|blocker|qa","body":"..."}.',
+    '- Puedes leer/actualizar whiteboards: GET/PATCH $HERMES_AGORA_URL/api/v1/projects/<projectId>/tasks/<taskId>/whiteboard con trazos/formas {kind:"rectangle|circle|arrow|freehand", points:[...]}.',
+    '- Si el perfil tiene el MCP hermes-agora-whiteboard habilitado, prefiere sus tools agora_list_projects/agora_list_tasks/agora_set_task_whiteboard_shapes para crear esquemas visuales sin manipular JSON a mano.',
     '- No inventes projectId/taskId: lee primero la lista si no aparece claramente en el TASK.'
   ].join('\n');
 }
